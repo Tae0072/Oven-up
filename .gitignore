@@ -1,0 +1,23 @@
+# 환경변수/비밀 (절대 커밋 금지)
+.env
+*.env
+!.env.example
+
+# Java / Spring Boot
+build/
+.gradle/
+*.class
+out/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+*.iml
+app/build/
+
+# IDE / OS
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
