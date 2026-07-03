@@ -6,6 +6,8 @@ import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../widgets/menu_card.dart';
 import 'cart_page.dart';
+import 'group_order_page.dart';
+import 'inquiry_list_page.dart';
 import 'login_page.dart';
 import 'menu_detail_page.dart';
 import 'order_history_page.dart';
@@ -89,21 +91,54 @@ class _MenuListPageState extends State<MenuListPage> {
     );
   }
 
+  void _openGroupOrder() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const GroupOrderPage()),
+    );
+  }
+
+  void _openInquiry() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const InquiryListPage()),
+    );
+  }
+
   void _showAccount() {
     final name = AuthStore.instance.user?.name ?? '';
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('내 계정'),
-        content: Text('$name 님, 안녕하세요!'),
+        title: Text('$name 님, 안녕하세요!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('주문 내역'),
+              onTap: () {
+                Navigator.of(dialogContext).pop();
+                _openOrderHistory();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.groups),
+              title: const Text('단체 주문 문의'),
+              onTap: () {
+                Navigator.of(dialogContext).pop();
+                _openGroupOrder();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.forum),
+              title: const Text('고객의 소리'),
+              onTap: () {
+                Navigator.of(dialogContext).pop();
+                _openInquiry();
+              },
+            ),
+          ],
+        ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              _openOrderHistory();
-            },
-            child: const Text('주문 내역'),
-          ),
           TextButton(
             onPressed: () {
               AuthStore.instance.logout();
