@@ -1,0 +1,132 @@
+# Claude 자동 PR 리뷰 (Claude 구독 토큰 방식 — API 키 불필요)
+#
+# 인증: ANTHROPIC_API_KEY 대신, Claude Pro/Max 구독으로 발급하는
+#       CLAUDE_CODE_OAUTH_TOKEN 시크릿을 사용한다. (QT-AI 프로젝트와 동일 방식)
+#
+# 사전 준비 (1회):
+#   1) 내 PC 터미널에서:  claude setup-token   (구독 계정으로 로그인 → 토큰 출력)
+#   2) 그 토큰을 레포 시크릿으로 등록:
+#        gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo Tae0072/Oven-up
+#      (또는 GitHub 웹: Settings > Secrets and variables > Actions > New repository secret)
+#
+# 동작: dev로 오는 PR의 코드 diff를 Claude가 리뷰해 PR에 코멘트로 남긴다(자문용).
+#       시크릿이 없으면 조용히 건너뛴다. 머지를 막지 않는다(필수 검사 아님).
+
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [dev]
+
+env:
+  # 리뷰에 쓸 모델 — 여기만 바꾸면 전체 반영 (예: claude-opus-4-8 / claude-sonnet-5)
+  ANTHROPIC_MODEL_NAME: claude-sonnet-5
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Claude review
+        id: review
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_MODEL: ${{ env.ANTHROPIC_MODEL_NAME }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set +e
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "CLAUDE_CODE_OAUTH_TOKEN 시크릿이 없어 리뷰를 건너뜁니다."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DIFF_FILE=$(mktemp)
+          PROMPT_FILE=$(mktemp)
+          trap 'rm -f "$DIFF_FILE" "$PROMPT_FILE"' EXIT
+
+          # 코드 파일만 diff 추출 (대용량 데이터 제외)
+          git diff "origin/${BASE_REF}...HEAD" -- \
+            '*.dart' '*.java' '*.kt' '*.gradle' '*.gradle.kts' \
+            '*.yml' '*.yaml' '*.properties' '*.xml' '*.md' '*.sql' \
+            > "$DIFF_FILE"
+
+          if [ ! -s "$DIFF_FILE" ]; then
+            echo "검토할 코드 변경이 없습니다."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+          당신은 오븐업(카페 주문 앱/웹) 프로젝트의 시니어 개발자입니다. 아래 PR diff를 한국어로 코드 리뷰하세요.
+
+          ## 프로젝트 컨텍스트
+          - 모놀리식: 프론트 Flutter(웹+앱) + 백엔드 Spring Boot 단일 앱 + MySQL
+          - 결제: PortOne(카드/카카오·네이버·토스·삼성페이)
+          - 문서 기준: 01 계획서 / 02 화면 / 03 기능 / 04 ERD / 05 API / 06 Git·PR 규칙
+
+          ## 리뷰 기준
+          1. 코드 품질: 가독성, 네이밍, 중복, 단일 책임
+          2. 버그·예외 처리: NPE/인덱스/동시성, 구체적 예외 처리, 외부 API(결제/소셜) 타임아웃·실패 처리
+          3. 보안(중요):
+             - 하드코딩 시크릿/평문 토큰/.env 커밋 금지
+             - SQL Injection 방어(JPA/PreparedStatement)
+             - 금액·권한은 서버에서 재계산·재검증 (화면 값 신뢰 금지)
+             - 배달 조건 서버 검증: 명지에코펠리스 건물 + 샌드위치 2개 이상
+             - 관리자(ADMIN) 권한 서버 검증
+          4. 문서 정합성: 05 API 명세 / 04 ERD / 02·03 문서와 충돌 없는지
+          5. 컨벤션: Conventional Commits, 주문 시점 가격 저장 등 03 기능 규칙 준수
+
+          ## 작성 규칙
+          - 기준별 발견 사항 정리(없으면 '해당 없음').
+          - 심각도 표시: [BLOCK] / [WARN] / [INFO]
+          - 마지막 줄에 다른 텍스트 없이 APPROVE 또는 REQUEST_CHANGES 만 출력.
+
+          ## PR Diff
+          PROMPT_EOF
+
+          cat "$DIFF_FILE" >> "$PROMPT_FILE"
+
+          REVIEW=$(claude --print < "$PROMPT_FILE" 2>&1)
+          {
+            echo 'output<<__EOF__'
+            echo "$REVIEW"
+            echo '__EOF__'
+          } >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Post review comment
+        if: always() && steps.review.outputs.skipped != 'true' && steps.review.outputs.output != ''
+        uses: actions/github-script@v7
+        env:
+          REVIEW_OUTPUT: ${{ steps.review.outputs.output }}
+        with:
+          script: |
+            const reviewText = (process.env.REVIEW_OUTPUT || '').trim();
+            if (!reviewText) return;
+            const lines = reviewText.split('\n');
+            const lastLine = lines[lines.length - 1].trim();
+            const isApproved = lastLine === 'APPROVE';
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: `## 🤖 Claude 자동 코드 리뷰\n\n${reviewText}`,
+              event: isApproved ? 'APPROVE' : 'COMMENT',
+            });
