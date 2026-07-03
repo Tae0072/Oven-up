@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../state/auth_store.dart';
+import '../theme/app_colors.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 
@@ -34,7 +35,6 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const brand = Color(0xFFB5651D);
     return Scaffold(
       appBar: AppBar(title: const Text('오븐업 5VEN UP')),
       body: ListView(
@@ -45,7 +45,7 @@ class HomePage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [brand, Color(0xFFD98A45)],
+                colors: [AppColors.primary, AppColors.primaryDark],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -151,7 +151,7 @@ class _ShortcutCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 34, color: const Color(0xFFB5651D)),
+              Icon(icon, size: 34, color: AppColors.primary),
               const SizedBox(height: 8),
               Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
             ],

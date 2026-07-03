@@ -118,8 +118,20 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.all(20),
         children: [
           const SizedBox(height: 8),
-          const Text('오븐업 5VEN UP',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Center(
+            child: Image.asset(
+              'assets/images/logo.png',
+              height: 92,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stack) =>
+                  const Icon(Icons.bakery_dining, size: 60),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Center(
+            child: Text('오븐업 5VEN UP',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _email,

@@ -29,9 +29,9 @@ void main() {
       OvenUpApp(home: SplashPage(repository: SampleMenuRepository())),
     );
     await tester.pump(); // 첫 프레임
-    expect(find.text('5VEN UP'), findsOneWidget);
+    expect(find.text('오븐업 · 수제 샌드위치'), findsOneWidget); // 스플래시 문구
 
-    await tester.pump(const Duration(seconds: 2)); // 이동 타이머 경과
+    await tester.pump(const Duration(seconds: 3)); // 이동 타이머(2.1s) 경과
     await tester.pumpAndSettle();
     expect(find.text('로그인'), findsWidgets); // 로그인 화면 도착
   });
