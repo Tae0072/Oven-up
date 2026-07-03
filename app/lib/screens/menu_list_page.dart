@@ -8,10 +8,11 @@ import '../widgets/menu_card.dart';
 import 'cart_page.dart';
 import 'login_page.dart';
 import 'menu_detail_page.dart';
+import 'order_history_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
 /// - 서버(repository)에서 메뉴를 불러와 표시. 로딩/에러 상태 처리.
-/// - 상단: 계정(로그인/로그아웃) + 장바구니 아이콘. 카드 탭 → 상세(S4).
+/// - 상단: 계정(로그인/로그아웃/주문내역) + 장바구니 아이콘. 카드 탭 → 상세(S4).
 class MenuListPage extends StatefulWidget {
   final MenuRepository repository;
 
@@ -82,6 +83,12 @@ class _MenuListPageState extends State<MenuListPage> {
     );
   }
 
+  void _openOrderHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const OrderHistoryPage()),
+    );
+  }
+
   void _showAccount() {
     final name = AuthStore.instance.user?.name ?? '';
     showDialog<void>(
@@ -91,8 +98,11 @@ class _MenuListPageState extends State<MenuListPage> {
         content: Text('$name 님, 안녕하세요!'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('닫기'),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _openOrderHistory();
+            },
+            child: const Text('주문 내역'),
           ),
           TextButton(
             onPressed: () {
@@ -100,6 +110,10 @@ class _MenuListPageState extends State<MenuListPage> {
               Navigator.of(dialogContext).pop();
             },
             child: const Text('로그아웃'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('닫기'),
           ),
         ],
       ),

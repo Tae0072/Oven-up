@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/cart_line.dart';
+import '../models/order_detail.dart';
+import '../models/order_summary.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
@@ -51,13 +53,45 @@ class OrderApi {
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     if (res.statusCode != 201) {
-      final error = body['error'];
-      final message = (error is Map && error['message'] is String)
-          ? error['message'] as String
-          : '주문에 실패했어요';
-      throw ApiException(message);
+      throw ApiException(_errorMessage(body, '주문에 실패했어요'));
     }
     final data = body['data'] as Map<String, dynamic>;
     return data['orderNo'] as String;
+  }
+
+  /// 내 주문 목록 (05_API §4.3)
+  Future<List<OrderSummary>> fetchMyOrders(String token) async {
+    final res = await _client.get(
+      Uri.parse('$kApiBaseUrl/api/orders'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '주문 내역을 불러오지 못했어요'));
+    }
+    return (body['data'] as List<dynamic>)
+        .map((e) => OrderSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 주문 상세 (05_API §4.4)
+  Future<OrderDetail> fetchOrderDetail(String token, int orderId) async {
+    final res = await _client.get(
+      Uri.parse('$kApiBaseUrl/api/orders/$orderId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '주문을 불러오지 못했어요'));
+    }
+    return OrderDetail.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  String _errorMessage(Map<String, dynamic> body, String fallback) {
+    final error = body['error'];
+    if (error is Map && error['message'] is String) {
+      return error['message'] as String;
+    }
+    return fallback;
   }
 }

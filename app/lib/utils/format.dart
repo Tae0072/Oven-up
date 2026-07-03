@@ -12,3 +12,28 @@ String formatPrice(int price) {
   buffer.write('원');
   return buffer.toString();
 }
+
+/// 수령 방식 코드 → 한글 라벨 (05_API fulfillmentType)
+String fulfillmentLabel(String code) {
+  switch (code) {
+    case 'DINE_IN':
+      return '매장식사';
+    case 'TAKEOUT':
+      return '포장';
+    case 'DELIVERY':
+      return '배달';
+    default:
+      return code;
+  }
+}
+
+/// 서버가 준 날짜/시간 문자열(ISO) → DateTime (없거나 형식 오류면 null)
+DateTime? parseServerDateTime(Object? value) {
+  return value is String ? DateTime.tryParse(value) : null;
+}
+
+/// DateTime → "2026-07-03 14:30"
+String formatDateTime(DateTime dt) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+}
