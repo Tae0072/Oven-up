@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
 import 'screens/menu_list_page.dart';
+import 'state/auth_store.dart';
 
-void main() {
+Future<void> main() async {
+  // 기기에 저장된 로그인 정보를 먼저 복원한 뒤 앱을 시작한다.
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthStore.instance.load();
   runApp(OvenUpApp());
 }
 
