@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
+import '../data/api_menu_repository.dart';
 import '../data/auth_api.dart';
+import '../data/menu_repository.dart';
 import '../state/auth_store.dart';
+import 'main_shell.dart';
 
 /// S1. 로그인 / 회원가입 화면 (02_화면_정의서 S1)
 /// - 이메일·비밀번호 로그인 / 회원가입.
 /// - 카카오·네이버 소셜 로그인 (지금은 dev mock — 실제 SDK 연결은 이후 단계, 문서 가이드 참고).
+///
+/// [isGate]가 true면 "앱 진입 관문"으로 동작한다: 로그인 성공 시 홈(MainShell)으로 교체 이동.
+/// false면 기존처럼 이전 화면으로 되돌아간다(pop).
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final bool isGate;
+  final MenuRepository? repository;
+
+  const LoginPage({super.key, this.isGate = false, this.repository});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -84,7 +93,16 @@ class _LoginPageState extends State<LoginPage> {
   void _applyLogin(AuthResult result) {
     if (!mounted) return;
     AuthStore.instance.setSession(result.token, result.user);
-    Navigator.of(context).pop(true);
+    if (widget.isGate) {
+      // 진입 관문: 로그인 성공 → 홈(MainShell)으로 교체 이동
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => MainShell(repository: widget.repository ?? ApiMenuRepository()),
+        ),
+      );
+    } else {
+      Navigator.of(context).pop(true);
+    }
   }
 
   void _showError(String message) {

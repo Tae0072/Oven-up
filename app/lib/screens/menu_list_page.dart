@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/menu_repository.dart';
 import '../models/menu_item.dart';
-import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../widgets/menu_card.dart';
 import 'cart_page.dart';
-import 'group_order_page.dart';
-import 'inquiry_list_page.dart';
-import 'login_page.dart';
 import 'menu_detail_page.dart';
-import 'order_history_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
 /// - 서버(repository)에서 메뉴를 불러와 표시. 로딩/에러 상태 처리.
@@ -79,82 +74,6 @@ class _MenuListPageState extends State<MenuListPage> {
     );
   }
 
-  void _openLogin() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
-    );
-  }
-
-  void _openOrderHistory() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const OrderHistoryPage()),
-    );
-  }
-
-  void _openGroupOrder() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const GroupOrderPage()),
-    );
-  }
-
-  void _openInquiry() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const InquiryListPage()),
-    );
-  }
-
-  void _showAccount() {
-    final name = AuthStore.instance.user?.name ?? '';
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('$name 님, 안녕하세요!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: const Text('주문 내역'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _openOrderHistory();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.groups),
-              title: const Text('단체 주문 문의'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _openGroupOrder();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.forum),
-              title: const Text('고객의 소리'),
-              onTap: () {
-                Navigator.of(dialogContext).pop();
-                _openInquiry();
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              AuthStore.instance.logout();
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('로그아웃'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _quickAdd(MenuItem item) {
     Cart.instance.add(item);
     ScaffoldMessenger.of(context)
@@ -173,18 +92,6 @@ class _MenuListPageState extends State<MenuListPage> {
       appBar: AppBar(
         title: const Text('메뉴'),
         actions: [
-          // 계정: 로그인 여부에 따라 아이콘/동작이 바뀐다.
-          ListenableBuilder(
-            listenable: AuthStore.instance,
-            builder: (context, _) {
-              final loggedIn = AuthStore.instance.isLoggedIn;
-              return IconButton(
-                icon: Icon(loggedIn ? Icons.person : Icons.person_outline),
-                tooltip: loggedIn ? (AuthStore.instance.user?.name ?? '내 계정') : '로그인',
-                onPressed: loggedIn ? _showAccount : _openLogin,
-              );
-            },
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ListenableBuilder(

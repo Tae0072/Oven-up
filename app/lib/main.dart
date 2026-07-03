@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
-import 'screens/menu_list_page.dart';
+import 'screens/splash_page.dart';
 import 'state/auth_store.dart';
 
 Future<void> main() async {
@@ -13,12 +13,16 @@ Future<void> main() async {
 }
 
 /// 오븐업(5VEN UP) 앱의 시작점.
-/// 첫 화면으로 "메뉴 목록"을 보여주며, 메뉴는 서버(ApiMenuRepository)에서 가져온다.
-/// (테스트에서는 repository 에 가짜 저장소를 넣어 서버 없이 확인한다.)
+/// 진입 흐름: 로딩(스플래시) → (로그인 안 됨) 로그인 → 홈(하단 내비: 홈·메뉴·마이페이지).
+/// 로그인이 유지돼 있으면 로딩 후 바로 홈으로 간다.
+/// (테스트에서는 [home]에 특정 화면을, [repository]에 가짜 저장소를 넣어 서버·로그인 없이 확인한다.)
 class OvenUpApp extends StatelessWidget {
   final MenuRepository repository;
 
-  OvenUpApp({super.key, MenuRepository? repository})
+  /// 테스트에서 진입 화면을 직접 지정할 때 사용(스플래시/로그인 관문을 건너뛴다).
+  final Widget? home;
+
+  OvenUpApp({super.key, MenuRepository? repository, this.home})
       : repository = repository ?? ApiMenuRepository();
 
   @override
@@ -30,7 +34,7 @@ class OvenUpApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB5651D)),
         useMaterial3: true,
       ),
-      home: MenuListPage(repository: repository),
+      home: home ?? SplashPage(repository: repository),
     );
   }
 }
