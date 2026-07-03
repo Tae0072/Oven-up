@@ -4,6 +4,7 @@ import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
 import 'screens/splash_page.dart';
 import 'state/auth_store.dart';
+import 'theme/app_colors.dart';
 
 Future<void> main() async {
   // 기기에 저장된 로그인 정보를 먼저 복원한 뒤 앱을 시작한다.
@@ -31,7 +32,11 @@ class OvenUpApp extends StatelessWidget {
       title: '오븐업 5VEN UP',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB5651D)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+        ),
+        scaffoldBackgroundColor: AppColors.bg,
         useMaterial3: true,
       ),
       home: home ?? SplashPage(repository: repository),

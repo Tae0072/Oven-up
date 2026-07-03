@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/menu_item.dart';
 import '../models/menu_option.dart';
 import '../state/cart.dart';
+import '../theme/app_colors.dart';
 import '../utils/format.dart';
 
 /// S4. 메뉴 상세 화면 (02_화면_정의서 S4 / 03_기능_명세서 §2)
@@ -96,13 +97,13 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFB5651D),
+                    color: AppColors.accent,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
                     'BEST',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.text,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),

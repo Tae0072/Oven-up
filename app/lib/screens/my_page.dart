@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/api_menu_repository.dart';
 import '../data/menu_repository.dart';
 import '../state/auth_store.dart';
+import '../theme/app_colors.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 import 'login_page.dart';
@@ -71,7 +72,7 @@ class MyPage extends StatelessWidget {
                         if (isAdmin)
                           const Padding(
                             padding: EdgeInsets.only(top: 4),
-                            child: Text('관리자(사장님)', style: TextStyle(color: Color(0xFFB5651D))),
+                            child: Text('관리자(사장님)', style: TextStyle(color: AppColors.primary)),
                           ),
                       ],
                     ),

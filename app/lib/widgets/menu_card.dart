@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/menu_item.dart';
+import '../theme/app_colors.dart';
 import '../utils/format.dart';
 
 /// 메뉴 목록에서 메뉴 하나를 보여주는 카드.
@@ -64,13 +65,13 @@ class MenuCard extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFB5651D),
+                              color: AppColors.accent,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
                               'BEST',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.text,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
