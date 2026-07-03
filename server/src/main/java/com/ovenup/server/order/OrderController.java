@@ -23,7 +23,7 @@ import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * 주문 API (05_API §4). 모두 로그인 필요.
+ * 주문 API (05_API §4). 모두 로그인 필요. 주문 항목은 서버 장바구니에서 읽는다.
  * - POST /api/orders                : 주문 생성 (결제대기)
  * - POST /api/orders/delivery-check : 배달 가능 여부 확인
  * - GET  /api/orders                : 내 주문 목록
@@ -57,8 +57,8 @@ public class OrderController {
     @PostMapping("/api/orders/delivery-check")
     public ApiResponse<DeliveryCheck> deliveryCheck(HttpServletRequest request,
                                                     @RequestBody DeliveryCheckRequest body) {
-        requireUserId(request);
-        return ApiResponse.ok(orderService.deliveryCheck(body));
+        Long userId = requireUserId(request);
+        return ApiResponse.ok(orderService.deliveryCheck(userId, body));
     }
 
     @GetMapping("/api/orders")

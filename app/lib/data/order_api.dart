@@ -9,13 +9,14 @@ import 'api_config.dart';
 import 'api_exception.dart';
 
 /// 주문 API 호출 (05_API §4). 로그인 토큰이 필요하다.
+/// 주문 항목은 서버 장바구니(§3.3)에서 읽으므로, 주문 전에 화면 장바구니를 서버로 동기화한다.
 class OrderApi {
   final http.Client _client;
 
   OrderApi({http.Client? client}) : _client = client ?? http.Client();
 
   /// 주문 생성 → 주문번호(orderNo) 반환.
-  /// 금액은 서버가 다시 계산하므로, 화면은 항목(메뉴/수량/옵션)만 보낸다.
+  /// 1) 서버 장바구니를 화면 장바구니와 맞추고(비우고 다시 담기) 2) 주문을 만든다.
   Future<String> createOrder({
     required String token,
     required List<CartLine> lines,
@@ -24,18 +25,25 @@ class OrderApi {
     String? deliveryAddress,
     String? requestMsg,
   }) async {
-    final items = lines
-        .map((l) => {
-              'menuId': l.menu.id,
-              'quantity': l.quantity,
-              'optionIds': l.options.map((o) => o.id).toList(),
-            })
-        .toList();
+    final authHeader = {'Authorization': 'Bearer $token'};
+    final jsonAuth = {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
 
-    final payload = <String, dynamic>{
-      'fulfillmentType': fulfillmentType,
-      'items': items,
-    };
+    // 1) 서버 장바구니 동기화
+    await _client.delete(Uri.parse('$kApiBaseUrl/api/cart'), headers: authHeader);
+    for (final line in lines) {
+      await _client.post(
+        Uri.parse('$kApiBaseUrl/api/cart/items'),
+        headers: jsonAuth,
+        body: jsonEncode({
+          'menuId': line.menu.id,
+          'quantity': line.quantity,
+          'optionIds': line.options.map((o) => o.id).toList(),
+        }),
+      );
+    }
+
+    // 2) 주문 생성 (서버 장바구니에서 항목을 읽음)
+    final payload = <String, dynamic>{'fulfillmentType': fulfillmentType};
     if (scheduledAtIso != null) {
       payload['scheduledAt'] = scheduledAtIso;
     }
@@ -48,7 +56,7 @@ class OrderApi {
 
     final res = await _client.post(
       Uri.parse('$kApiBaseUrl/api/orders'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      headers: jsonAuth,
       body: jsonEncode(payload),
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
