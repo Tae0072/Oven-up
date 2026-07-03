@@ -1,15 +1,19 @@
-// 메뉴 목록 화면 기본 동작 테스트.
-// 화면이 뜨고, 첫 메뉴가 보이고, [담기]를 누르면 장바구니 배지가 생기는지 확인한다.
+// 메뉴 목록 + 상세 화면 기본 동작 테스트.
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oven_up_app/main.dart';
+import 'package:oven_up_app/state/cart.dart';
 
 void main() {
+  setUp(() {
+    // 테스트마다 장바구니를 비워 시작한다.
+    Cart.instance.clear();
+  });
+
   testWidgets('메뉴 목록이 보이고 담기 누르면 장바구니 수가 는다', (WidgetTester tester) async {
     await tester.pumpWidget(const OvenUpApp());
 
-    // 화면 제목과 첫 메뉴가 보인다
     expect(find.text('메뉴'), findsWidgets);
     expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
 
@@ -22,5 +26,16 @@ void main() {
 
     // 장바구니 배지에 1이 생긴다
     expect(find.text('1'), findsOneWidget);
+  });
+
+  testWidgets('메뉴 카드를 누르면 상세 화면이 뜬다', (WidgetTester tester) async {
+    await tester.pumpWidget(const OvenUpApp());
+
+    await tester.tap(find.text('잠봉 루꼴라 샌드위치'));
+    await tester.pumpAndSettle();
+
+    // 상세 화면 요소가 보인다 (옵션 선택 영역)
+    expect(find.text('옵션 선택'), findsOneWidget);
+    expect(find.text('치즈 추가'), findsOneWidget);
   });
 }
