@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
+import 'data/api_menu_repository.dart';
+import 'data/menu_repository.dart';
 import 'screens/menu_list_page.dart';
 
 void main() {
-  runApp(const OvenUpApp());
+  runApp(OvenUpApp());
 }
 
 /// 오븐업(5VEN UP) 앱의 시작점.
-/// 지금은 첫 화면으로 "메뉴 목록"을 바로 보여준다.
-/// (홈/장바구니/주문서 등은 로드맵 순서대로 이어서 붙인다.)
+/// 첫 화면으로 "메뉴 목록"을 보여주며, 메뉴는 서버(ApiMenuRepository)에서 가져온다.
+/// (테스트에서는 repository 에 가짜 저장소를 넣어 서버 없이 확인한다.)
 class OvenUpApp extends StatelessWidget {
-  const OvenUpApp({super.key});
+  final MenuRepository repository;
+
+  OvenUpApp({super.key, MenuRepository? repository})
+      : repository = repository ?? ApiMenuRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +26,7 @@ class OvenUpApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB5651D)),
         useMaterial3: true,
       ),
-      home: const MenuListPage(),
+      home: MenuListPage(repository: repository),
     );
   }
 }

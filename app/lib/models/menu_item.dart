@@ -1,7 +1,7 @@
 import 'menu_option.dart';
 
 /// 메뉴 한 개를 나타내는 데이터 모델.
-/// 지금은 화면용 가짜 데이터에 쓰이고, 나중에 서버 API(GET /api/menus)로 교체된다.
+/// 서버 API(GET /api/menus) 응답을 이 모델로 바꿔서 화면에 쓴다.
 /// 참고: 04_데이터구조_ERD menu 테이블, 05_API_명세서 §3.1~3.2
 class MenuItem {
   /// 메뉴 고유번호
@@ -13,7 +13,7 @@ class MenuItem {
   /// 메뉴 설명
   final String description;
 
-  /// 빵 종류 — 지금은 카테고리 탭 용도로 사용 (바게트/치아바타/샤워도우)
+  /// 빵 종류 — 화면 카테고리 탭 용도 (바게트/치아바타/샤워도우)
   final String bread;
 
   /// 기본 가격(원)
@@ -38,4 +38,18 @@ class MenuItem {
     this.isBest = false,
     this.options = const <MenuOption>[],
   });
+
+  /// 서버 JSON → MenuItem
+  factory MenuItem.fromJson(Map<String, dynamic> json) => MenuItem(
+        id: (json['id'] as num).toInt(),
+        name: json['name'] as String,
+        description: (json['description'] as String?) ?? '',
+        bread: (json['bread'] as String?) ?? '',
+        price: (json['price'] as num).toInt(),
+        emoji: (json['emoji'] as String?) ?? '🥪',
+        isBest: (json['isBest'] as bool?) ?? false,
+        options: ((json['options'] as List<dynamic>?) ?? const <dynamic>[])
+            .map((e) => MenuOption.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 }
