@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/sample_menus.dart';
+import '../data/menu_repository.dart';
 import '../models/menu_item.dart';
 import '../state/cart.dart';
 import '../widgets/menu_card.dart';
@@ -8,11 +8,13 @@ import 'cart_page.dart';
 import 'menu_detail_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
+/// - 서버(repository)에서 메뉴를 불러와 표시. 로딩/에러 상태 처리.
 /// - 상단 카테고리 탭(빵 종류) + 메뉴 카드 목록 + 장바구니 아이콘(담긴 개수)
 /// - 카드 탭 → 메뉴 상세(S4). [담기]는 옵션 없이 1개 바로 담기. 장바구니 아이콘 → 장바구니(S5).
-/// - 지금은 가짜 데이터. 장바구니는 앱 메모리(Cart) 사용(서버 연동은 로드맵 3단계).
 class MenuListPage extends StatefulWidget {
-  const MenuListPage({super.key});
+  final MenuRepository repository;
+
+  const MenuListPage({super.key, required this.repository});
 
   @override
   State<MenuListPage> createState() => _MenuListPageState();
@@ -23,11 +25,43 @@ class _MenuListPageState extends State<MenuListPage> {
 
   String _selected = '전체';
 
+  List<MenuItem> _menus = const <MenuItem>[];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // 첫 프레임 이후에 불러오기 시작 (initState 중 setState 방지)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final menus = await widget.repository.fetchMenus();
+      if (!mounted) return;
+      setState(() {
+        _menus = menus;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
+  }
+
   List<MenuItem> get _filtered {
     if (_selected == '전체') {
-      return sampleMenus;
+      return _menus;
     }
-    return sampleMenus.where((m) => m.bread == _selected).toList();
+    return _menus.where((m) => m.bread == _selected).toList();
   }
 
   void _openDetail(MenuItem item) {
@@ -56,14 +90,12 @@ class _MenuListPageState extends State<MenuListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _filtered;
     return Scaffold(
       appBar: AppBar(
         title: const Text('메뉴'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            // 장바구니 개수는 Cart가 바뀔 때마다 자동으로 다시 그린다.
             child: ListenableBuilder(
               listenable: Cart.instance,
               builder: (context, _) => _CartIcon(
@@ -74,44 +106,91 @@ class _MenuListPageState extends State<MenuListPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 카테고리 탭 (가로 스크롤 칩)
-          SizedBox(
-            height: 56,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              itemCount: _categories.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                return ChoiceChip(
-                  label: Text(category),
-                  selected: _selected == category,
-                  onSelected: (_) => setState(() => _selected = category),
-                );
-              },
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _ErrorView(message: _error!, onRetry: _load);
+    }
+    final items = _filtered;
+    return Column(
+      children: [
+        // 카테고리 탭 (가로 스크롤 칩)
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            itemCount: _categories.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              return ChoiceChip(
+                label: Text(category),
+                selected: _selected == category,
+                onSelected: (_) => setState(() => _selected = category),
+              );
+            },
+          ),
+        ),
+        // 메뉴 카드 목록
+        Expanded(
+          child: items.isEmpty
+              ? const Center(child: Text('해당 메뉴가 없어요'))
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return MenuCard(
+                      item: item,
+                      onTap: () => _openDetail(item),
+                      onAdd: () => _quickAdd(item),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 불러오기 실패 시 보여주는 화면 (다시 시도 버튼 포함)
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text(
+              '메뉴를 불러오지 못했어요',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-          ),
-          // 메뉴 카드 목록
-          Expanded(
-            child: items.isEmpty
-                ? const Center(child: Text('해당 메뉴가 없어요'))
-                : ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return MenuCard(
-                        item: item,
-                        onTap: () => _openDetail(item),
-                        onAdd: () => _quickAdd(item),
-                      );
-                    },
-                  ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              '서버가 켜져 있는지 확인해 주세요.\n$message',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
+          ],
+        ),
       ),
     );
   }

@@ -12,4 +12,11 @@ class MenuOption {
     required this.name,
     required this.extraPrice,
   });
+
+  /// 서버 JSON → MenuOption
+  factory MenuOption.fromJson(Map<String, dynamic> json) => MenuOption(
+        id: (json['id'] as num).toInt(),
+        name: json['name'] as String,
+        extraPrice: (json['extraPrice'] as num?)?.toInt() ?? 0,
+      );
 }
