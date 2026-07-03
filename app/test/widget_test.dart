@@ -1,30 +1,26 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// 메뉴 목록 화면 기본 동작 테스트.
+// 화면이 뜨고, 첫 메뉴가 보이고, [담기]를 누르면 장바구니 배지가 생기는지 확인한다.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oven_up_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('메뉴 목록이 보이고 담기 누르면 장바구니 수가 는다', (WidgetTester tester) async {
+    await tester.pumpWidget(const OvenUpApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
+    // 화면 제목과 첫 메뉴가 보인다
+    expect(find.text('메뉴'), findsWidgets);
+    expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
+
+    // 처음엔 장바구니 배지(숫자 1)가 없다
     expect(find.text('1'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // 첫 번째 [담기] 버튼을 누른다
+    await tester.tap(find.text('담기').first);
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
+    // 장바구니 배지에 1이 생긴다
     expect(find.text('1'), findsOneWidget);
   });
 }
