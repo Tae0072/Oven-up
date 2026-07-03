@@ -4,13 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
  * 서버가 처음 뜰 때 메뉴 테이블이 비어 있으면 5VEN UP 대표 메뉴 7종을 넣어준다(시드).
  * ⚠️ 지금은 초기 개발용 시드. 나중에 관리자 메뉴 관리(A3) 기능이 생기면 그쪽으로 관리한다.
+ * (@Order(1): 데모 데이터 시더보다 먼저 실행되어 메뉴가 준비되게 한다)
  */
 @Component
+@Order(1)
 public class DataInitializer implements CommandLineRunner {
 
     private static final String SANDWICH = "샌드위치";

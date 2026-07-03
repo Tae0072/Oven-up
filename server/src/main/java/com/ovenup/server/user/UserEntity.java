@@ -51,6 +51,11 @@ public class UserEntity {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** 권한 지정 (예: 관리자 계정 시드에서 ADMIN 부여) */
+    public void assignRole(String role) {
+        this.role = role;
+    }
+
     public Long getId() {
         return id;
     }
