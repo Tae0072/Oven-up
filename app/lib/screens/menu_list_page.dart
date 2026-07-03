@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../data/sample_menus.dart';
 import '../models/menu_item.dart';
+import '../state/cart.dart';
 import '../widgets/menu_card.dart';
+import 'menu_detail_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
 /// - 상단 카테고리 탭(빵 종류) + 메뉴 카드 목록 + 장바구니 아이콘(담긴 개수)
-/// - 지금은 가짜 데이터로 UI만. 담기/장바구니는 임시 카운트 (서버 연동은 로드맵 3단계).
+/// - 카드 탭 → 메뉴 상세(S4). [담기]는 옵션 없이 1개 바로 담기.
+/// - 지금은 가짜 데이터. 장바구니는 앱 메모리(Cart) 사용(서버 연동은 로드맵 3단계).
 class MenuListPage extends StatefulWidget {
   const MenuListPage({super.key});
 
@@ -18,7 +21,6 @@ class _MenuListPageState extends State<MenuListPage> {
   static const List<String> _categories = <String>['전체', '바게트', '치아바타', '샤워도우'];
 
   String _selected = '전체';
-  int _cartCount = 0;
 
   List<MenuItem> get _filtered {
     if (_selected == '전체') {
@@ -27,8 +29,14 @@ class _MenuListPageState extends State<MenuListPage> {
     return sampleMenus.where((m) => m.bread == _selected).toList();
   }
 
-  void _addToCart(MenuItem item) {
-    setState(() => _cartCount++);
+  void _openDetail(MenuItem item) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => MenuDetailPage(item: item)),
+    );
+  }
+
+  void _quickAdd(MenuItem item) {
+    Cart.instance.add(item);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -48,7 +56,11 @@ class _MenuListPageState extends State<MenuListPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: _CartIcon(count: _cartCount),
+            // 장바구니 개수는 Cart가 바뀔 때마다 자동으로 다시 그린다.
+            child: ListenableBuilder(
+              listenable: Cart.instance,
+              builder: (context, _) => _CartIcon(count: Cart.instance.totalCount),
+            ),
           ),
         ],
       ),
@@ -83,7 +95,8 @@ class _MenuListPageState extends State<MenuListPage> {
                       final item = items[index];
                       return MenuCard(
                         item: item,
-                        onAdd: () => _addToCart(item),
+                        onTap: () => _openDetail(item),
+                        onAdd: () => _quickAdd(item),
                       );
                     },
                   ),
