@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_exception.dart';
+import '../data/order_api.dart';
+import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../utils/format.dart';
+import 'login_page.dart';
 
 /// 수령 방식 (05_API §4.2 fulfillmentType)
 enum FulfillmentType { dineIn, takeout, delivery }
@@ -9,14 +13,12 @@ enum FulfillmentType { dineIn, takeout, delivery }
 /// 배달 최소 조건: 샌드위치 2개 이상 (03_기능_명세서 §6, 04_ERD §4)
 const int kMinSandwichForDelivery = 2;
 
-/// 배달비 — 초기엔 무료(0). 필요 시 매장 설정으로 조정.
+/// 배달비 — 초기엔 무료(0).
 const int kDeliveryFee = 0;
 
 /// S6. 주문서 작성 화면 (02_화면_정의서 S6 / 03_기능_명세서 §6)
-/// - 주문 요약 + 수령 방식(매장/포장/배달) + 수령 시점(지금/예약) + 배달주소 + 요청사항 + 최종금액
-/// - 배달 조건(명지에코펠리스 + 샌드위치 2개 이상)은 화면에서 1차 안내.
-///   ⚠️ 실제 주문 생성 시 서버가 반드시 재검증한다 (05_API §4.1~4.2, 화면 값 신뢰 금지).
-/// - [결제하기]는 임시(결제 연동은 로드맵 6단계).
+/// - 주문 요약 + 수령 방식 + 수령 시점 + 배달주소 + 요청사항 + 최종금액
+/// - [결제하기] → 로그인 확인 후 서버에 주문 생성(POST /api/orders). 금액·배달조건은 서버가 재검증.
 class OrderFormPage extends StatefulWidget {
   const OrderFormPage({super.key});
 
@@ -25,9 +27,12 @@ class OrderFormPage extends StatefulWidget {
 }
 
 class _OrderFormPageState extends State<OrderFormPage> {
+  final OrderApi _orderApi = OrderApi();
+
   FulfillmentType _fulfillment = FulfillmentType.takeout;
   bool _isReservation = false;
   DateTime? _scheduledAt;
+  bool _submitting = false;
 
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _requestController = TextEditingController();
@@ -41,7 +46,6 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
   bool get _isDelivery => _fulfillment == FulfillmentType.delivery;
 
-  /// 우리 메뉴는 모두 샌드위치라 담긴 총 개수 = 샌드위치 수.
   int get _sandwichCount => Cart.instance.totalCount;
 
   bool get _deliveryQtyOk => _sandwichCount >= kMinSandwichForDelivery;
@@ -49,7 +53,6 @@ class _OrderFormPageState extends State<OrderFormPage> {
   int get _finalPrice =>
       Cart.instance.totalPrice + (_isDelivery ? kDeliveryFee : 0);
 
-  /// 결제 버튼 활성 조건 (배달이면 조건/주소 확인, 예약이면 시간 확인)
   bool get _canPay {
     if (Cart.instance.isEmpty) return false;
     if (_isDelivery) {
@@ -58,6 +61,17 @@ class _OrderFormPageState extends State<OrderFormPage> {
     }
     if (_isReservation && _scheduledAt == null) return false;
     return true;
+  }
+
+  String _fulfillmentCode() {
+    switch (_fulfillment) {
+      case FulfillmentType.dineIn:
+        return 'DINE_IN';
+      case FulfillmentType.takeout:
+        return 'TAKEOUT';
+      case FulfillmentType.delivery:
+        return 'DELIVERY';
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -86,22 +100,65 @@ class _OrderFormPageState extends State<OrderFormPage> {
   }
 
   Future<void> _pay() async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('주문 확인'),
-        content: const Text('결제 연동은 다음 단계에서 붙습니다.\n지금은 주문서까지만 확인해요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
-    Cart.instance.clear();
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    // 1) 로그인 확인 (안 돼 있으면 로그인 화면으로)
+    if (!AuthStore.instance.isLoggedIn) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('주문하려면 로그인이 필요해요'),
+          duration: Duration(seconds: 1),
+        ));
+      await navigator.push<bool>(
+        MaterialPageRoute<bool>(builder: (_) => const LoginPage()),
+      );
+      if (!mounted) return;
+      if (!AuthStore.instance.isLoggedIn) return; // 로그인 안 하고 돌아옴
+    }
+
+    // 2) 주문 생성
+    setState(() => _submitting = true);
+    try {
+      final orderNo = await _orderApi.createOrder(
+        token: AuthStore.instance.token!,
+        lines: Cart.instance.lines,
+        fulfillmentType: _fulfillmentCode(),
+        scheduledAtIso: (_isReservation && _scheduledAt != null)
+            ? _scheduledAt!.toIso8601String()
+            : null,
+        deliveryAddress: _isDelivery ? _addressController.text.trim() : null,
+        requestMsg: _requestController.text.trim(),
+      );
+      if (!mounted) return;
+      Cart.instance.clear();
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('주문 완료'),
+          content: Text('주문번호: $orderNo\n결제 연동은 이후 단계에서 붙습니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      navigator.popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('서버에 연결하지 못했어요.')));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -213,11 +270,18 @@ class _OrderFormPageState extends State<OrderFormPage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: FilledButton(
-            onPressed: _canPay ? _pay : null,
+            onPressed: (_canPay && !_submitting) ? _pay : null,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            child: Text('${formatPrice(_finalPrice)} 결제하기'),
+            child: _submitting
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : Text('${formatPrice(_finalPrice)} 주문하기'),
           ),
         ),
       ),

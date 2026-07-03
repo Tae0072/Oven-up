@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../data/menu_repository.dart';
 import '../models/menu_item.dart';
+import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../widgets/menu_card.dart';
 import 'cart_page.dart';
+import 'login_page.dart';
 import 'menu_detail_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
 /// - 서버(repository)에서 메뉴를 불러와 표시. 로딩/에러 상태 처리.
-/// - 상단 카테고리 탭(빵 종류) + 메뉴 카드 목록 + 장바구니 아이콘(담긴 개수)
-/// - 카드 탭 → 메뉴 상세(S4). [담기]는 옵션 없이 1개 바로 담기. 장바구니 아이콘 → 장바구니(S5).
+/// - 상단: 계정(로그인/로그아웃) + 장바구니 아이콘. 카드 탭 → 상세(S4).
 class MenuListPage extends StatefulWidget {
   final MenuRepository repository;
 
@@ -32,7 +33,6 @@ class _MenuListPageState extends State<MenuListPage> {
   @override
   void initState() {
     super.initState();
-    // 첫 프레임 이후에 불러오기 시작 (initState 중 setState 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -76,6 +76,36 @@ class _MenuListPageState extends State<MenuListPage> {
     );
   }
 
+  void _openLogin() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+    );
+  }
+
+  void _showAccount() {
+    final name = AuthStore.instance.user?.name ?? '';
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('내 계정'),
+        content: Text('$name 님, 안녕하세요!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('닫기'),
+          ),
+          TextButton(
+            onPressed: () {
+              AuthStore.instance.logout();
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _quickAdd(MenuItem item) {
     Cart.instance.add(item);
     ScaffoldMessenger.of(context)
@@ -94,6 +124,18 @@ class _MenuListPageState extends State<MenuListPage> {
       appBar: AppBar(
         title: const Text('메뉴'),
         actions: [
+          // 계정: 로그인 여부에 따라 아이콘/동작이 바뀐다.
+          ListenableBuilder(
+            listenable: AuthStore.instance,
+            builder: (context, _) {
+              final loggedIn = AuthStore.instance.isLoggedIn;
+              return IconButton(
+                icon: Icon(loggedIn ? Icons.person : Icons.person_outline),
+                tooltip: loggedIn ? (AuthStore.instance.user?.name ?? '내 계정') : '로그인',
+                onPressed: loggedIn ? _showAccount : _openLogin,
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ListenableBuilder(
@@ -120,7 +162,6 @@ class _MenuListPageState extends State<MenuListPage> {
     final items = _filtered;
     return Column(
       children: [
-        // 카테고리 탭 (가로 스크롤 칩)
         SizedBox(
           height: 56,
           child: ListView.separated(
@@ -138,7 +179,6 @@ class _MenuListPageState extends State<MenuListPage> {
             },
           ),
         ),
-        // 메뉴 카드 목록
         Expanded(
           child: items.isEmpty
               ? const Center(child: Text('해당 메뉴가 없어요'))

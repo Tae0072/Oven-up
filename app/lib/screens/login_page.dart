@@ -1,0 +1,148 @@
+import 'package:flutter/material.dart';
+
+import '../data/api_exception.dart';
+import '../data/auth_api.dart';
+import '../state/auth_store.dart';
+
+/// S1. 로그인 / 회원가입 화면 (02_화면_정의서 S1)
+/// - 이메일·비밀번호로 로그인. 회원가입 모드에서는 이름·전화번호도 입력.
+/// - (카카오·네이버 소셜 로그인은 이후 단계)
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _phone = TextEditingController();
+  final AuthApi _authApi = AuthApi();
+
+  bool _isSignup = false;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _name.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      if (_isSignup) {
+        await _authApi.signup(
+          email: _email.text.trim(),
+          password: _password.text,
+          name: _name.text.trim(),
+          phone: _phone.text.trim(),
+        );
+      }
+      final result = await _authApi.login(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+      if (!mounted) return;
+      AuthStore.instance.setSession(result.token, result.user);
+      Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = '서버에 연결하지 못했어요. 서버가 켜져 있는지 확인해 주세요.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(_isSignup ? '회원가입' : '로그인')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const SizedBox(height: 8),
+          const Text('오븐업 5VEN UP',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: '이메일',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _password,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: '비밀번호 (8자 이상)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          if (_isSignup) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(
+                labelText: '이름',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phone,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: '전화번호',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: TextStyle(color: Colors.red[700])),
+          ],
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _loading ? null : _submit,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Text(_isSignup ? '회원가입하고 시작' : '로그인'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _loading
+                ? null
+                : () => setState(() {
+                      _isSignup = !_isSignup;
+                      _error = null;
+                    }),
+            child: Text(_isSignup ? '이미 계정이 있어요 · 로그인' : '계정이 없어요 · 회원가입'),
+          ),
+        ],
+      ),
+    );
+  }
+}
