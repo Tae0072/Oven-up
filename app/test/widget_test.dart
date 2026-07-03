@@ -1,8 +1,9 @@
-// 메뉴 목록 + 상세 + 장바구니 화면 기본 동작 테스트.
+// 메뉴 목록 + 상세 + 장바구니 + 주문서 화면 기본 동작 테스트.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:oven_up_app/data/sample_menus.dart';
 import 'package:oven_up_app/main.dart';
 import 'package:oven_up_app/state/cart.dart';
 
@@ -17,15 +18,11 @@ void main() {
 
     expect(find.text('메뉴'), findsWidgets);
     expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
-
-    // 처음엔 장바구니 배지(숫자 1)가 없다
     expect(find.text('1'), findsNothing);
 
-    // 첫 번째 [담기] 버튼을 누른다
     await tester.tap(find.text('담기').first);
     await tester.pump();
 
-    // 장바구니 배지에 1이 생긴다
     expect(find.text('1'), findsOneWidget);
   });
 
@@ -39,14 +36,10 @@ void main() {
     expect(find.text('치즈 추가'), findsOneWidget);
   });
 
-  testWidgets('담은 뒤 장바구니 화면에서 항목과 총액이 보인다', (WidgetTester tester) async {
+  testWidgets('장바구니 화면에서 항목과 총액이 보인다', (WidgetTester tester) async {
+    Cart.instance.add(sampleMenus.first);
     await tester.pumpWidget(const OvenUpApp());
 
-    // LA갈비 1개 담기
-    await tester.tap(find.text('담기').first);
-    await tester.pump();
-
-    // 장바구니 아이콘 → 장바구니 화면
     await tester.tap(find.byIcon(Icons.shopping_cart_outlined));
     await tester.pumpAndSettle();
 
@@ -54,5 +47,20 @@ void main() {
     expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
     expect(find.text('총액'), findsOneWidget);
     expect(find.text('주문하기'), findsOneWidget);
+  });
+
+  testWidgets('장바구니에서 주문하기 누르면 주문서가 뜬다', (WidgetTester tester) async {
+    // 스낵바 간섭을 피하기 위해 장바구니에 직접 담고 시작.
+    Cart.instance.add(sampleMenus.first);
+    await tester.pumpWidget(const OvenUpApp());
+
+    await tester.tap(find.byIcon(Icons.shopping_cart_outlined));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('주문하기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('주문서'), findsOneWidget);
+    expect(find.text('수령 방식'), findsOneWidget);
   });
 }
