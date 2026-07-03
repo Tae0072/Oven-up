@@ -1,5 +1,6 @@
-// 메뉴 목록 + 상세 화면 기본 동작 테스트.
+// 메뉴 목록 + 상세 + 장바구니 화면 기본 동작 테스트.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:oven_up_app/main.dart';
@@ -34,8 +35,24 @@ void main() {
     await tester.tap(find.text('잠봉 루꼴라 샌드위치'));
     await tester.pumpAndSettle();
 
-    // 상세 화면 요소가 보인다 (옵션 선택 영역)
     expect(find.text('옵션 선택'), findsOneWidget);
     expect(find.text('치즈 추가'), findsOneWidget);
+  });
+
+  testWidgets('담은 뒤 장바구니 화면에서 항목과 총액이 보인다', (WidgetTester tester) async {
+    await tester.pumpWidget(const OvenUpApp());
+
+    // LA갈비 1개 담기
+    await tester.tap(find.text('담기').first);
+    await tester.pump();
+
+    // 장바구니 아이콘 → 장바구니 화면
+    await tester.tap(find.byIcon(Icons.shopping_cart_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text('장바구니'), findsOneWidget);
+    expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
+    expect(find.text('총액'), findsOneWidget);
+    expect(find.text('주문하기'), findsOneWidget);
   });
 }

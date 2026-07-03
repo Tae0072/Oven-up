@@ -4,11 +4,12 @@ import '../data/sample_menus.dart';
 import '../models/menu_item.dart';
 import '../state/cart.dart';
 import '../widgets/menu_card.dart';
+import 'cart_page.dart';
 import 'menu_detail_page.dart';
 
 /// S3. 메뉴 목록 화면 (02_화면_정의서 S3 / 03_기능_명세서 §2)
 /// - 상단 카테고리 탭(빵 종류) + 메뉴 카드 목록 + 장바구니 아이콘(담긴 개수)
-/// - 카드 탭 → 메뉴 상세(S4). [담기]는 옵션 없이 1개 바로 담기.
+/// - 카드 탭 → 메뉴 상세(S4). [담기]는 옵션 없이 1개 바로 담기. 장바구니 아이콘 → 장바구니(S5).
 /// - 지금은 가짜 데이터. 장바구니는 앱 메모리(Cart) 사용(서버 연동은 로드맵 3단계).
 class MenuListPage extends StatefulWidget {
   const MenuListPage({super.key});
@@ -32,6 +33,12 @@ class _MenuListPageState extends State<MenuListPage> {
   void _openDetail(MenuItem item) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => MenuDetailPage(item: item)),
+    );
+  }
+
+  void _openCart() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CartPage()),
     );
   }
 
@@ -59,7 +66,10 @@ class _MenuListPageState extends State<MenuListPage> {
             // 장바구니 개수는 Cart가 바뀔 때마다 자동으로 다시 그린다.
             child: ListenableBuilder(
               listenable: Cart.instance,
-              builder: (context, _) => _CartIcon(count: Cart.instance.totalCount),
+              builder: (context, _) => _CartIcon(
+                count: Cart.instance.totalCount,
+                onPressed: _openCart,
+              ),
             ),
           ),
         ],
@@ -110,8 +120,9 @@ class _MenuListPageState extends State<MenuListPage> {
 /// 장바구니 아이콘 + 담긴 개수 배지
 class _CartIcon extends StatelessWidget {
   final int count;
+  final VoidCallback onPressed;
 
-  const _CartIcon({required this.count});
+  const _CartIcon({required this.count, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -120,26 +131,28 @@ class _CartIcon extends StatelessWidget {
       children: [
         IconButton(
           icon: const Icon(Icons.shopping_cart_outlined),
-          onPressed: () {},
+          onPressed: onPressed,
         ),
         if (count > 0)
           Positioned(
             right: 4,
             top: 4,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$count',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$count',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
