@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/cart_line.dart';
 import '../state/cart.dart';
 import '../utils/format.dart';
+import 'order_form_page.dart';
 
 /// S5. 장바구니 화면 (02_화면_정의서 S5 / 03_기능_명세서 §3)
-/// - 담은 항목 리스트, 수량 +/-, 삭제, 총액, [주문하기]
-/// - 앱 내 장바구니(Cart)를 구독해 바뀔 때마다 자동 갱신.
-/// - 지금은 가짜 데이터. [주문하기]는 다음 단계(S6 주문서)에서 연결.
+/// - 담은 항목 리스트, 수량 +/-, 삭제, 총액, [주문하기] → 주문서(S6)
+/// - 앱 내 장바구니(Cart)를 구독해 바뀔 때마다 자동 갱신. 지금은 가짜 데이터.
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
@@ -87,7 +87,6 @@ class _CartLineTile extends StatelessWidget {
               ],
             ),
           ),
-          // 수량 조절
           _QtyStepper(line: line),
           IconButton(
             tooltip: '삭제',
@@ -154,17 +153,10 @@ class _TotalBar extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             FilledButton(
-              onPressed: () {
-                // TODO: S6 주문서 화면으로 연결 (다음 PR)
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(
-                      content: Text('주문서 화면은 다음 단계에서 연결됩니다'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-              },
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                    builder: (_) => const OrderFormPage()),
+              ),
               style:
                   FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
               child: const Text('주문하기'),
