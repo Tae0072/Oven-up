@@ -1,5 +1,6 @@
 package com.ovenup.server.user;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -95,5 +96,41 @@ class UserProfileControllerTest {
                         .content("{\"currentPassword\":\"12345678\",\"newPassword\":\"123\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    void notifyDefaultsOnAndCanToggleOff() throws Exception {
+        String t = token("notify1@oven.com", "12345678");
+        mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + t))
+                .andExpect(jsonPath("$.data.notifyEnabled").value(true));
+
+        mockMvc.perform(patch("/api/users/me/notify").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.notifyEnabled").value(false));
+
+        mockMvc.perform(get("/api/users/me").header("Authorization", "Bearer " + t))
+                .andExpect(jsonPath("$.data.notifyEnabled").value(false));
+    }
+
+    @Test
+    void deleteAccountWrongPasswordRejected() throws Exception {
+        String t = token("del1@oven.com", "12345678");
+        mockMvc.perform(delete("/api/users/me").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"currentPassword\":\"wrongpass\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PASSWORD_MISMATCH"));
+    }
+
+    @Test
+    void deleteAccountThenLoginFails() throws Exception {
+        String t = token("del2@oven.com", "12345678");
+        mockMvc.perform(delete("/api/users/me").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"currentPassword\":\"12345678\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"del2@oven.com\",\"password\":\"12345678\"}"))
+                .andExpect(status().isUnauthorized());
     }
 }

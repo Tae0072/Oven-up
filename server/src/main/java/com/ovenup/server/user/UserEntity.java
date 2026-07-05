@@ -36,6 +36,9 @@ public class UserEntity {
 
     private int pointBalance;
 
+    /** 알림 끄기 여부. false=알림 켜짐(기본). (기존 행은 false로 들어와 자동으로 '켜짐') */
+    private boolean notifyDisabled;
+
     private LocalDateTime createdAt;
 
     protected UserEntity() {
@@ -67,6 +70,16 @@ public class UserEntity {
     /** 비밀번호 변경 (해시된 값을 넣어야 함) */
     public void changePassword(String hashedPassword) {
         this.password = hashedPassword;
+    }
+
+    /** 알림 켜기/끄기 */
+    public void setNotifyEnabled(boolean enabled) {
+        this.notifyDisabled = !enabled;
+    }
+
+    /** 알림 켜짐 여부 (기본 켜짐) */
+    public boolean isNotifyEnabled() {
+        return !notifyDisabled;
     }
 
     /** 적립금 지급 */

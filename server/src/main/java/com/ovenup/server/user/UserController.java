@@ -1,5 +1,6 @@
 package com.ovenup.server.user;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -9,7 +10,9 @@ import com.ovenup.server.auth.AuthTokenFilter;
 import com.ovenup.server.common.ApiException;
 import com.ovenup.server.common.ApiResponse;
 import com.ovenup.server.user.dto.ChangePasswordRequest;
+import com.ovenup.server.user.dto.DeleteAccountRequest;
 import com.ovenup.server.user.dto.MyProfile;
+import com.ovenup.server.user.dto.NotifySettingRequest;
 import com.ovenup.server.user.dto.UpdateProfileRequest;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +49,7 @@ public class UserController {
                 .orElseThrow(() -> ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다."));
         return ApiResponse.ok(new MyProfile(
                 user.getId(), user.getEmail(), user.getName(),
-                user.getPhone(), user.getRole(), user.getPointBalance()));
+                user.getPhone(), user.getRole(), user.getPointBalance(), user.isNotifyEnabled()));
     }
 
     @PatchMapping("/api/users/me")
@@ -61,6 +64,21 @@ public class UserController {
                                             @RequestBody ChangePasswordRequest body) {
         Long userId = requireUserId(request);
         userService.changePassword(userId, body);
+        return ApiResponse.ok(null);
+    }
+
+    @PatchMapping("/api/users/me/notify")
+    public ApiResponse<MyProfile> setNotify(HttpServletRequest request,
+                                            @RequestBody NotifySettingRequest body) {
+        Long userId = requireUserId(request);
+        return ApiResponse.ok(userService.setNotifyEnabled(userId, body.enabled()));
+    }
+
+    @DeleteMapping("/api/users/me")
+    public ApiResponse<Void> deleteAccount(HttpServletRequest request,
+                                           @RequestBody DeleteAccountRequest body) {
+        Long userId = requireUserId(request);
+        userService.deleteAccount(userId, body.currentPassword());
         return ApiResponse.ok(null);
     }
 }

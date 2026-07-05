@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ovenup.server.common.ApiException;
 import com.ovenup.server.notification.dto.NotificationDtos.NotificationView;
+import com.ovenup.server.user.UserRepository;
 
 /**
  * 알림 처리 (05_API §9). 인앱 알림을 저장/조회하고, 만들 때 PushSender로 OS 푸시도 함께 보낸다.
@@ -16,15 +17,25 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final PushSender pushSender;
+    private final UserRepository userRepository;
 
-    public NotificationService(NotificationRepository notificationRepository, PushSender pushSender) {
+    public NotificationService(NotificationRepository notificationRepository, PushSender pushSender,
+                               UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
         this.pushSender = pushSender;
+        this.userRepository = userRepository;
     }
 
-    /** 알림 생성 + OS 푸시 발송(mock/real). 다른 도메인(주문 등)에서 이벤트 발생 시 호출. */
+    /**
+     * 알림 생성 + OS 푸시 발송(mock/real). 다른 도메인(주문 등)에서 이벤트 발생 시 호출.
+     * 손님이 알림을 꺼두었으면 저장/발송하지 않는다.
+     */
     @Transactional
     public void notifyUser(Long userId, String title, String body, String type, Long relatedOrderId) {
+        boolean enabled = userRepository.findById(userId).map(u -> u.isNotifyEnabled()).orElse(true);
+        if (!enabled) {
+            return;
+        }
         notificationRepository.save(new NotificationEntity(userId, title, body, type, relatedOrderId));
         pushSender.send(userId, title, body);
     }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
+import '../data/api_menu_repository.dart';
 import '../data/auth_api.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
+import 'login_page.dart';
 
 /// S11. 내 정보 수정 — 프로필(이름·연락처) 수정 + 비밀번호 변경.
 /// (02_화면_정의서 S11 / 05_API §2.5)
@@ -29,6 +31,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   final TextEditingController _newPwController = TextEditingController();
   final TextEditingController _newPw2Controller = TextEditingController();
   bool _savingPw = false;
+
+  bool _notifyEnabled = true;
+  bool _togglingNotify = false;
 
   @override
   void initState() {
@@ -62,6 +67,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         _email = p.email;
         _nameController.text = p.name;
         _phoneController.text = p.phone;
+        _notifyEnabled = p.notifyEnabled;
         _loading = false;
       });
     } catch (_) {
@@ -132,6 +138,74 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       _snack('서버에 연결하지 못했어요.');
     } finally {
       if (mounted) setState(() => _savingPw = false);
+    }
+  }
+
+  Future<void> _toggleNotify(bool value) async {
+    final token = AuthStore.instance.token;
+    if (token == null) return;
+    setState(() {
+      _notifyEnabled = value;
+      _togglingNotify = true;
+    });
+    try {
+      final p = await _authApi.setNotifyEnabled(token: token, enabled: value);
+      if (!mounted) return;
+      setState(() => _notifyEnabled = p.notifyEnabled);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notifyEnabled = !value); // 실패 시 되돌림
+      _snack('알림 설정을 바꾸지 못했어요.');
+    } finally {
+      if (mounted) setState(() => _togglingNotify = false);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final pwController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('회원 탈퇴'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('탈퇴하면 계정 정보가 삭제되고 되돌릴 수 없어요.\n계속하려면 현재 비밀번호를 입력해 주세요.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: '현재 비밀번호', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('취소')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('탈퇴하기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final token = AuthStore.instance.token;
+    if (token == null || !mounted) return;
+    final navigator = Navigator.of(context);
+    try {
+      await _authApi.deleteAccount(token: token, currentPassword: pwController.text);
+      if (!mounted) return;
+      AuthStore.instance.logout();
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => LoginPage(repository: ApiMenuRepository(), isGate: true)),
+        (route) => false,
+      );
+    } on ApiException catch (e) {
+      _snack(e.message);
+    } catch (_) {
+      _snack('서버에 연결하지 못했어요.');
     }
   }
 
@@ -231,6 +305,32 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           child: _savingPw
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('비밀번호 변경'),
+        ),
+
+        const Divider(height: 40),
+
+        _sectionTitle('알림'),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('주문·문의 알림 받기'),
+          subtitle: Text(_notifyEnabled ? '알림이 켜져 있어요' : '알림이 꺼져 있어요'),
+          value: _notifyEnabled,
+          onChanged: _togglingNotify ? null : _toggleNotify,
+        ),
+
+        const Divider(height: 40),
+
+        _sectionTitle('계정'),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _deleteAccount,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            foregroundColor: Colors.red,
+            side: const BorderSide(color: Colors.red),
+          ),
+          icon: const Icon(Icons.person_remove_outlined),
+          label: const Text('회원 탈퇴'),
         ),
       ],
     );
