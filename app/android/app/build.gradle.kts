@@ -14,6 +14,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    buildFeatures {
+        // 네이버 로그인 키를 문자열 리소스로 주입(resValue)하기 위해 필요 (최신 AGP는 기본 비활성)
+        resValues = true
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.ovenup.oven_up_app"
