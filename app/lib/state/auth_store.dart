@@ -44,6 +44,16 @@ class AuthStore extends ChangeNotifier {
     _persist(token, user);
   }
 
+  /// 프로필 수정 후 표시 이름을 갱신하고 기기에도 반영한다.
+  void updateName(String name) {
+    final u = _user;
+    final t = _token;
+    if (u == null || t == null) return;
+    _user = AuthUser(id: u.id, name: name, role: u.role);
+    notifyListeners();
+    _persist(t, _user!);
+  }
+
   void logout() {
     _token = null;
     _user = null;

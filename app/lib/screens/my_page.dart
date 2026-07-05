@@ -14,6 +14,7 @@ import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 import 'login_page.dart';
 import 'order_history_page.dart';
+import 'profile_edit_page.dart';
 
 /// S12. 마이페이지 — 내 정보 + 주문 내역·단체 주문·고객의 소리 + 로그아웃.
 /// (02_화면_정의서 S12)
@@ -68,20 +69,28 @@ class MyPage extends StatelessWidget {
                   children: [
                     const CircleAvatar(radius: 26, child: Icon(Icons.person)),
                     const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user?.name.isNotEmpty == true ? '${user!.name} 님' : '손님',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        if (isAdmin)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Text('관리자(사장님)', style: TextStyle(color: AppColors.primary)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.name.isNotEmpty == true ? '${user!.name} 님' : '손님',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                      ],
+                          if (isAdmin)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text('관리자(사장님)', style: TextStyle(color: AppColors.primary)),
+                            ),
+                        ],
+                      ),
                     ),
+                    if (user != null)
+                      OutlinedButton.icon(
+                        onPressed: () => _push(context, const ProfileEditPage()),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('정보 수정'),
+                      ),
                   ],
                 ),
               ),
