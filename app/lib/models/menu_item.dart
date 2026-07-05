@@ -28,6 +28,12 @@ class MenuItem {
   /// 판매 상태 (판매중 / 품절)
   final String status;
 
+  /// 평균 별점 (0이면 리뷰 없음)
+  final double ratingAvg;
+
+  /// 리뷰 개수
+  final int reviewCount;
+
   /// 선택 가능한 옵션들 (없으면 빈 목록)
   final List<MenuOption> options;
 
@@ -40,6 +46,8 @@ class MenuItem {
     this.description = '',
     this.isBest = false,
     this.status = '판매중',
+    this.ratingAvg = 0,
+    this.reviewCount = 0,
     this.options = const <MenuOption>[],
   });
 
@@ -56,6 +64,8 @@ class MenuItem {
         emoji: (json['emoji'] as String?) ?? '🥪',
         isBest: (json['isBest'] as bool?) ?? false,
         status: (json['status'] as String?) ?? '판매중',
+        ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0,
+        reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
         options: ((json['options'] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => MenuOption.fromJson(e as Map<String, dynamic>))
             .toList(),

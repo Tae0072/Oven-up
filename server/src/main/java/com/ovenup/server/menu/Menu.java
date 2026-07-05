@@ -20,6 +20,8 @@ public record Menu(
         boolean isBest,
         String imageUrl,
         String status,
+        double ratingAvg,
+        int reviewCount,
         List<MenuOption> options
 ) {
 }
