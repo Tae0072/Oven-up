@@ -52,6 +52,14 @@ public class GroupOrderEntity {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** 관리자: 상태·메모 갱신 */
+    public void updateByAdmin(String status, String adminMemo) {
+        if (status != null && !status.isBlank()) {
+            this.status = status;
+        }
+        this.adminMemo = adminMemo;
+    }
+
     public Long getId() {
         return id;
     }

@@ -28,4 +28,13 @@ public final class InquiryDtos {
     public record InquiryDetail(long inquiryId, String title, String content, String imageUrl,
                                 String status, LocalDateTime createdAt, ReplyView reply) {
     }
+
+    /** 관리자용 문의 항목 (내용·답변 포함) */
+    public record AdminInquiryItem(long inquiryId, long userId, String title, String content,
+                                   String imageUrl, String status, LocalDateTime createdAt, ReplyView reply) {
+    }
+
+    /** 관리자 답변 요청 */
+    public record ReplyRequest(String content) {
+    }
 }

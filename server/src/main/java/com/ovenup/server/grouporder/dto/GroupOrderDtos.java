@@ -20,4 +20,8 @@ public final class GroupOrderDtos {
     public record GroupOrderView(long groupOrderId, LocalDateTime desiredAt, int headcount, String detail,
                                  String contact, String status, String adminMemo, LocalDateTime createdAt) {
     }
+
+    /** 관리자 상태·메모 갱신 요청 */
+    public record AdminUpdateRequest(String status, String adminMemo) {
+    }
 }

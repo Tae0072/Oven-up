@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface GroupOrderRepository extends JpaRepository<GroupOrderEntity, Long> {
 
     List<GroupOrderEntity> findByUserIdOrderByIdDesc(Long userId);
+
+    List<GroupOrderEntity> findAllByOrderByIdDesc();
 }

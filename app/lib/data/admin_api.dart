@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/group_order.dart';
 import '../models/menu_item.dart';
 import '../models/order_detail.dart';
 import '../models/order_summary.dart';
@@ -209,6 +210,61 @@ class AdminApi {
     return DashboardStats.fromJson(body['data'] as Map<String, dynamic>);
   }
 
+  // ===== 고객지원: 문의 답변 + 단체주문 관리 =====
+
+  /// 전체 문의 목록(내용·답변 포함)
+  Future<List<AdminInquiry>> fetchInquiries(String token) async {
+    final res = await _client.get(Uri.parse('$kApiBaseUrl/api/admin/inquiries'),
+        headers: {'Authorization': 'Bearer $token'});
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '문의 목록을 불러오지 못했어요'));
+    }
+    return (body['data'] as List<dynamic>)
+        .map((e) => AdminInquiry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 문의 답변(등록/수정)
+  Future<void> replyInquiry(String token, int inquiryId, String content) async {
+    final res = await _client.post(
+      Uri.parse('$kApiBaseUrl/api/admin/inquiries/$inquiryId/reply'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'content': content}),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '답변 등록에 실패했어요'));
+    }
+  }
+
+  /// 전체 단체주문 문의
+  Future<List<GroupOrder>> fetchGroupOrders(String token) async {
+    final res = await _client.get(Uri.parse('$kApiBaseUrl/api/admin/group-orders'),
+        headers: {'Authorization': 'Bearer $token'});
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '단체주문을 불러오지 못했어요'));
+    }
+    return (body['data'] as List<dynamic>)
+        .map((e) => GroupOrder.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 단체주문 상태·메모 갱신
+  Future<void> updateGroupOrder(String token, int groupOrderId,
+      {required String status, required String adminMemo}) async {
+    final res = await _client.patch(
+      Uri.parse('$kApiBaseUrl/api/admin/group-orders/$groupOrderId'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'status': status, 'adminMemo': adminMemo}),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '단체주문 갱신에 실패했어요'));
+    }
+  }
+
   String _errorMessage(Map<String, dynamic> body, String fallback) {
     final error = body['error'];
     if (error is Map && error['message'] is String) {
@@ -217,6 +273,37 @@ class AdminApi {
     return fallback;
   }
 }
+
+/// 관리자용 문의 항목 (내용·답변 포함)
+class AdminInquiry {
+  final int inquiryId;
+  final String title;
+  final String content;
+  final String status;
+  final String? replyContent;
+
+  const AdminInquiry({
+    required this.inquiryId,
+    required this.title,
+    required this.content,
+    required this.status,
+    this.replyContent,
+  });
+
+  factory AdminInquiry.fromJson(Map<String, dynamic> j) {
+    final reply = j['reply'];
+    return AdminInquiry(
+      inquiryId: (j['inquiryId'] as num).toInt(),
+      title: (j['title'] as String?) ?? '',
+      content: (j['content'] as String?) ?? '',
+      status: (j['status'] as String?) ?? '',
+      replyContent: reply is Map<String, dynamic> ? reply['content'] as String? : null,
+    );
+  }
+}
+
+/// 관리자가 바꿀 수 있는 단체주문 상태
+const List<String> kGroupOrderStatuses = ['접수', '협의중', '확정', '취소'];
 
 /// 대시보드 통계 (05_API /api/admin/stats)
 class DashboardStats {
