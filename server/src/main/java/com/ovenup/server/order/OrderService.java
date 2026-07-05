@@ -19,6 +19,7 @@ import com.ovenup.server.order.dto.OrderResponses.OrderCreated;
 import com.ovenup.server.order.dto.OrderResponses.OrderDetail;
 import com.ovenup.server.order.dto.OrderResponses.OrderItemView;
 import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
+import com.ovenup.server.notification.NotificationService;
 import com.ovenup.server.payment.PaymentResult;
 import com.ovenup.server.payment.PaymentVerifier;
 import com.ovenup.server.payment.dto.PaymentDtos.PaymentDone;
@@ -42,12 +43,14 @@ public class OrderService {
     private final CartService cartService;
     private final OrderRepository orderRepository;
     private final PaymentVerifier paymentVerifier;
+    private final NotificationService notificationService;
 
     public OrderService(CartService cartService, OrderRepository orderRepository,
-                        PaymentVerifier paymentVerifier) {
+                        PaymentVerifier paymentVerifier, NotificationService notificationService) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
         this.paymentVerifier = paymentVerifier;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -130,6 +133,9 @@ public class OrderService {
 
         order.markPaid(method);
         orderRepository.save(order);
+        // 손님에게 접수 알림
+        notificationService.notifyUser(order.getUserId(), "주문 " + order.getOrderNo(),
+                "결제가 완료되어 주문이 접수됐어요.", "ORDER_PAID", order.getId());
         return new PaymentDone(order.getId(), order.getOrderNo(), order.getStatus(), order.getPaymentMethod());
     }
 
@@ -193,7 +199,23 @@ public class OrderService {
                 .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
         order.changeStatus(status);
         orderRepository.save(order);
+        // 손님에게 상태 변경 알림 (§9)
+        notificationService.notifyUser(order.getUserId(), "주문 " + order.getOrderNo(),
+                statusMessage(status), "ORDER_STATUS", order.getId());
         return adminDetail(orderId);
+    }
+
+    /** 상태별 손님 안내 문구 */
+    private String statusMessage(String status) {
+        return switch (status) {
+            case "준비중" -> "주문을 준비하고 있어요.";
+            case "준비완료" -> "준비가 완료됐어요! 픽업/수령해 주세요.";
+            case "픽업완료" -> "픽업이 완료됐어요. 맛있게 드세요!";
+            case "배달중" -> "배달을 출발했어요.";
+            case "배달완료" -> "배달이 완료됐어요. 맛있게 드세요!";
+            case "취소" -> "주문이 취소됐어요.";
+            default -> "주문 상태가 '" + status + "'(으)로 바뀌었어요.";
+        };
     }
 
     @Transactional(readOnly = true)
