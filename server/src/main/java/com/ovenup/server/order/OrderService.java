@@ -236,7 +236,7 @@ public class OrderService {
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
         List<OrderItemView> items = order.getItems().stream()
-                .map(i -> new OrderItemView(i.getMenuName(), i.getUnitPrice(), i.getQuantity(), i.getOptionsDesc()))
+                .map(i -> new OrderItemView(i.getMenuId(), i.getMenuName(), i.getUnitPrice(), i.getQuantity(), i.getOptionsDesc()))
                 .toList();
         return new OrderDetail(order.getId(), order.getOrderNo(), order.getStatus(), order.getFulfillmentType(),
                 order.getScheduledAt(), order.getDeliveryAddress(), order.getTotalPrice(),
@@ -354,7 +354,7 @@ public class OrderService {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "본인 주문만 볼 수 있어요.");
         }
         List<OrderItemView> items = order.getItems().stream()
-                .map(i -> new OrderItemView(i.getMenuName(), i.getUnitPrice(), i.getQuantity(), i.getOptionsDesc()))
+                .map(i -> new OrderItemView(i.getMenuId(), i.getMenuName(), i.getUnitPrice(), i.getQuantity(), i.getOptionsDesc()))
                 .toList();
         return new OrderDetail(order.getId(), order.getOrderNo(), order.getStatus(), order.getFulfillmentType(),
                 order.getScheduledAt(), order.getDeliveryAddress(), order.getTotalPrice(),

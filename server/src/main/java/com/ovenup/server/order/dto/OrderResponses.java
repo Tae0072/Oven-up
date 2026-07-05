@@ -20,8 +20,8 @@ public final class OrderResponses {
                                LocalDateTime scheduledAt, String status, LocalDateTime createdAt) {
     }
 
-    /** 주문 상세의 항목 한 줄 (§4.4) */
-    public record OrderItemView(String menuName, int unitPrice, int quantity, String optionsDesc) {
+    /** 주문 상세의 항목 한 줄 (§4.4). menuId는 재주문(다시 담기) 시 현재 메뉴 매칭용. */
+    public record OrderItemView(long menuId, String menuName, int unitPrice, int quantity, String optionsDesc) {
     }
 
     /** 주문 상세 (§4.4) */
