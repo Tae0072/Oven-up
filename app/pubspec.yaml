@@ -41,6 +41,8 @@ dependencies:
   # 모바일(안드로이드/iOS) 소셜 로그인 SDK
   kakao_flutter_sdk_user: ^2.0.0
   flutter_naver_login: ^2.1.1
+  # 모바일 결제창 — PortOne 공식 SDK (웹은 index.html의 JS SDK 사용)
+  portone_flutter: ^1.0.1
 
 dev_dependencies:
   flutter_test:
