@@ -25,6 +25,9 @@ class MenuItem {
   /// 대표(BEST) 메뉴 여부
   final bool isBest;
 
+  /// 판매 상태 (판매중 / 품절)
+  final String status;
+
   /// 선택 가능한 옵션들 (없으면 빈 목록)
   final List<MenuOption> options;
 
@@ -36,8 +39,12 @@ class MenuItem {
     required this.emoji,
     this.description = '',
     this.isBest = false,
+    this.status = '판매중',
     this.options = const <MenuOption>[],
   });
+
+  /// 품절 여부
+  bool get soldOut => status == '품절';
 
   /// 서버 JSON → MenuItem
   factory MenuItem.fromJson(Map<String, dynamic> json) => MenuItem(
@@ -48,6 +55,7 @@ class MenuItem {
         price: (json['price'] as num).toInt(),
         emoji: (json['emoji'] as String?) ?? '🥪',
         isBest: (json['isBest'] as bool?) ?? false,
+        status: (json['status'] as String?) ?? '판매중',
         options: ((json['options'] as List<dynamic>?) ?? const <dynamic>[])
             .map((e) => MenuOption.fromJson(e as Map<String, dynamic>))
             .toList(),

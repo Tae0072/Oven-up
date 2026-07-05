@@ -68,6 +68,27 @@ public class MenuEntity {
         this.options = options;
     }
 
+    /** 관리자 메뉴 수정 */
+    public void update(String name, String description, int price, String category,
+                       String bread, String emoji, boolean best) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.category = category;
+        this.bread = bread;
+        this.emoji = emoji;
+        this.best = best;
+    }
+
+    /** 판매 상태 변경 (판매중 / 품절) */
+    public void changeStatus(String status) {
+        this.status = status;
+    }
+
+    public boolean isSoldOut() {
+        return "품절".equals(status);
+    }
+
     public Long getId() {
         return id;
     }

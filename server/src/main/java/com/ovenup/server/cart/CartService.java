@@ -70,8 +70,10 @@ public class CartService {
         if (request.menuId() == null) {
             throw ApiException.badRequest("INVALID_INPUT", "메뉴가 지정되지 않았습니다.");
         }
-        if (!menuRepository.existsById(request.menuId())) {
-            throw ApiException.badRequest("MENU_NOT_FOUND", "없는 메뉴입니다.");
+        MenuEntity menu = menuRepository.findById(request.menuId())
+                .orElseThrow(() -> ApiException.badRequest("MENU_NOT_FOUND", "없는 메뉴입니다."));
+        if (menu.isSoldOut()) {
+            throw ApiException.badRequest("MENU_SOLD_OUT", "품절된 메뉴예요.");
         }
         int quantity = request.quantity() <= 0 ? 1 : request.quantity();
         String optionIds = (request.optionIds() == null) ? ""

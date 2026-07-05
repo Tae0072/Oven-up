@@ -7,6 +7,7 @@ import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'admin_coupons_page.dart';
+import 'admin_menus_page.dart';
 import 'admin_orders_page.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
@@ -95,6 +96,12 @@ class MyPage extends StatelessWidget {
                         title: const Text('주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _push(context, const AdminOrdersPage()),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.restaurant_menu, color: AppColors.primary),
+                        title: const Text('메뉴 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminMenusPage()),
                       ),
                       ListTile(
                         leading: const Icon(Icons.local_activity, color: AppColors.primary),
