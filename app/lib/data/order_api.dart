@@ -24,6 +24,8 @@ class OrderApi {
     String? scheduledAtIso,
     String? deliveryAddress,
     String? requestMsg,
+    String? couponCode,
+    int usePoints = 0,
   }) async {
     final authHeader = {'Authorization': 'Bearer $token'};
     final jsonAuth = {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
@@ -52,6 +54,12 @@ class OrderApi {
     }
     if (requestMsg != null && requestMsg.isNotEmpty) {
       payload['requestMsg'] = requestMsg;
+    }
+    if (couponCode != null && couponCode.isNotEmpty) {
+      payload['couponCode'] = couponCode;
+    }
+    if (usePoints > 0) {
+      payload['usePoints'] = usePoints;
     }
 
     final res = await _client.post(

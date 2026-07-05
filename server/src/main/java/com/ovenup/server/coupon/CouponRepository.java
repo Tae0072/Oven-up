@@ -1,0 +1,15 @@
+package com.ovenup.server.coupon;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CouponRepository extends JpaRepository<CouponEntity, Long> {
+
+    Optional<CouponEntity> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    List<CouponEntity> findAllByOrderByIdDesc();
+}

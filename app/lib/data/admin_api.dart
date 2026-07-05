@@ -55,6 +55,50 @@ class AdminApi {
     return OrderDetail.fromJson(body['data'] as Map<String, dynamic>);
   }
 
+  /// 쿠폰 목록 (관리자)
+  Future<List<AdminCoupon>> fetchCoupons(String token) async {
+    final res = await _client.get(Uri.parse('$kApiBaseUrl/api/admin/coupons'),
+        headers: {'Authorization': 'Bearer $token'});
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '쿠폰 목록을 불러오지 못했어요'));
+    }
+    return (body['data'] as List<dynamic>)
+        .map((e) => AdminCoupon.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 쿠폰 발급 (관리자)
+  Future<void> createCoupon(
+    String token, {
+    required String code,
+    required String name,
+    required String type, // AMOUNT / PERCENT
+    required int value,
+    required int minOrderAmount,
+    String? expiresAtIso,
+  }) async {
+    final payload = <String, dynamic>{
+      'code': code,
+      'name': name,
+      'type': type,
+      'value': value,
+      'minOrderAmount': minOrderAmount,
+    };
+    if (expiresAtIso != null && expiresAtIso.isNotEmpty) {
+      payload['expiresAt'] = expiresAtIso;
+    }
+    final res = await _client.post(
+      Uri.parse('$kApiBaseUrl/api/admin/coupons'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(payload),
+    );
+    if (res.statusCode != 201) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      throw ApiException(_errorMessage(body, '쿠폰 발급에 실패했어요'));
+    }
+  }
+
   String _errorMessage(Map<String, dynamic> body, String fallback) {
     final error = body['error'];
     if (error is Map && error['message'] is String) {
@@ -62,6 +106,39 @@ class AdminApi {
     }
     return fallback;
   }
+}
+
+/// 관리자 쿠폰 정보
+class AdminCoupon {
+  final int couponId;
+  final String code;
+  final String name;
+  final String type;
+  final int value;
+  final int minOrderAmount;
+  final bool active;
+
+  const AdminCoupon({
+    required this.couponId,
+    required this.code,
+    required this.name,
+    required this.type,
+    required this.value,
+    required this.minOrderAmount,
+    required this.active,
+  });
+
+  factory AdminCoupon.fromJson(Map<String, dynamic> j) => AdminCoupon(
+        couponId: (j['couponId'] as num).toInt(),
+        code: (j['code'] as String?) ?? '',
+        name: (j['name'] as String?) ?? '',
+        type: (j['type'] as String?) ?? '',
+        value: (j['value'] as num?)?.toInt() ?? 0,
+        minOrderAmount: (j['minOrderAmount'] as num?)?.toInt() ?? 0,
+        active: (j['active'] as bool?) ?? true,
+      );
+
+  String get discountText => type == 'PERCENT' ? '$value%' : '$value원';
 }
 
 /// 관리자가 바꿀 수 있는 주문 상태 (서버 ADMIN_STATUSES와 맞춤)

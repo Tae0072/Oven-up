@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ovenup.server.coupon.CouponEntity;
+import com.ovenup.server.coupon.CouponRepository;
 import com.ovenup.server.grouporder.GroupOrderEntity;
 import com.ovenup.server.grouporder.GroupOrderRepository;
 import com.ovenup.server.inquiry.InquiryEntity;
@@ -50,22 +52,30 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final GroupOrderRepository groupOrderRepository;
     private final InquiryRepository inquiryRepository;
     private final InquiryReplyRepository inquiryReplyRepository;
+    private final CouponRepository couponRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public DemoDataInitializer(UserRepository userRepository, OrderRepository orderRepository,
                                MenuJpaRepository menuRepository, GroupOrderRepository groupOrderRepository,
-                               InquiryRepository inquiryRepository, InquiryReplyRepository inquiryReplyRepository) {
+                               InquiryRepository inquiryRepository, InquiryReplyRepository inquiryReplyRepository,
+                               CouponRepository couponRepository) {
         this.userRepository = userRepository;
         this.orderRepository = orderRepository;
         this.menuRepository = menuRepository;
         this.groupOrderRepository = groupOrderRepository;
         this.inquiryRepository = inquiryRepository;
         this.inquiryReplyRepository = inquiryReplyRepository;
+        this.couponRepository = couponRepository;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
+        // 데모 쿠폰 1종(쿠폰이 하나도 없을 때만): WELCOME3000 = 3,000원 할인, 1만원 이상
+        if (couponRepository.count() == 0) {
+            couponRepository.save(new CouponEntity("WELCOME3000", "웰컴 3천원 할인", "AMOUNT", 3000, 10000, null));
+        }
+
         if (userRepository.existsByEmail(DEMO_EMAIL)) {
             return; // 이미 데모 데이터가 있으면 넣지 않음
         }
