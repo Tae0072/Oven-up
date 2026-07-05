@@ -56,6 +56,19 @@ public class UserEntity {
         this.role = role;
     }
 
+    /** 프로필(이름·연락처) 수정 */
+    public void updateProfile(String name, String phone) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
+        this.phone = phone;
+    }
+
+    /** 비밀번호 변경 (해시된 값을 넣어야 함) */
+    public void changePassword(String hashedPassword) {
+        this.password = hashedPassword;
+    }
+
     /** 적립금 지급 */
     public void addPoints(int amount) {
         if (amount > 0) {

@@ -77,6 +77,54 @@ class AuthApi {
     );
   }
 
+  /// 내 정보 조회 (05_API §2.4)
+  Future<MyProfile> fetchProfile(String token) async {
+    final res = await _client.get(
+      Uri.parse('$kApiBaseUrl/api/users/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '내 정보를 불러오지 못했어요'));
+    }
+    return MyProfile.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// 프로필(이름·연락처) 수정 (05_API §2.5)
+  Future<MyProfile> updateProfile({
+    required String token,
+    required String name,
+    required String phone,
+  }) async {
+    final res = await _client.patch(
+      Uri.parse('$kApiBaseUrl/api/users/me'),
+      headers: {..._jsonHeader, 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'name': name, 'phone': phone}),
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '정보 수정에 실패했어요'));
+    }
+    return MyProfile.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// 비밀번호 변경 (05_API §2.5)
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final res = await _client.patch(
+      Uri.parse('$kApiBaseUrl/api/users/me/password'),
+      headers: {..._jsonHeader, 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      throw ApiException(_errorMessage(body, '비밀번호 변경에 실패했어요'));
+    }
+  }
+
   String _errorMessage(Map<String, dynamic> body, String fallback) {
     final error = body['error'];
     if (error is Map && error['message'] is String) {
@@ -84,4 +132,29 @@ class AuthApi {
     }
     return fallback;
   }
+}
+
+/// 내 정보 (05_API §2.4)
+class MyProfile {
+  final String email;
+  final String name;
+  final String phone;
+  final String role;
+  final int pointBalance;
+
+  const MyProfile({
+    required this.email,
+    required this.name,
+    required this.phone,
+    required this.role,
+    required this.pointBalance,
+  });
+
+  factory MyProfile.fromJson(Map<String, dynamic> j) => MyProfile(
+        email: (j['email'] as String?) ?? '',
+        name: (j['name'] as String?) ?? '',
+        phone: (j['phone'] as String?) ?? '',
+        role: (j['role'] as String?) ?? 'USER',
+        pointBalance: (j['pointBalance'] as num?)?.toInt() ?? 0,
+      );
 }

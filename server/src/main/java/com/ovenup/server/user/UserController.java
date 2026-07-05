@@ -1,39 +1,66 @@
 package com.ovenup.server.user;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ovenup.server.auth.AuthTokenFilter;
 import com.ovenup.server.common.ApiException;
 import com.ovenup.server.common.ApiResponse;
+import com.ovenup.server.user.dto.ChangePasswordRequest;
 import com.ovenup.server.user.dto.MyProfile;
+import com.ovenup.server.user.dto.UpdateProfileRequest;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * 회원 정보 API (05_API §2.4)
- * - GET /api/users/me : 내 정보 (로그인 필요)
+ * 회원 정보 API (05_API §2.4~2.5)
+ * - GET   /api/users/me          : 내 정보 (로그인 필요)
+ * - PATCH /api/users/me          : 프로필(이름·연락처) 수정
+ * - PATCH /api/users/me/password : 비밀번호 변경
  */
 @RestController
 public class UserController {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
-    @GetMapping("/api/users/me")
-    public ApiResponse<MyProfile> me(HttpServletRequest request) {
+    private Long requireUserId(HttpServletRequest request) {
         Object attr = request.getAttribute(AuthTokenFilter.USER_ID_ATTR);
         if (attr == null) {
             throw ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다.");
         }
-        Long userId = (Long) attr;
+        return (Long) attr;
+    }
+
+    @GetMapping("/api/users/me")
+    public ApiResponse<MyProfile> me(HttpServletRequest request) {
+        Long userId = requireUserId(request);
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다."));
         return ApiResponse.ok(new MyProfile(
                 user.getId(), user.getEmail(), user.getName(),
                 user.getPhone(), user.getRole(), user.getPointBalance()));
+    }
+
+    @PatchMapping("/api/users/me")
+    public ApiResponse<MyProfile> updateProfile(HttpServletRequest request,
+                                                @RequestBody UpdateProfileRequest body) {
+        Long userId = requireUserId(request);
+        return ApiResponse.ok(userService.updateProfile(userId, body));
+    }
+
+    @PatchMapping("/api/users/me/password")
+    public ApiResponse<Void> changePassword(HttpServletRequest request,
+                                            @RequestBody ChangePasswordRequest body) {
+        Long userId = requireUserId(request);
+        userService.changePassword(userId, body);
+        return ApiResponse.ok(null);
     }
 }
