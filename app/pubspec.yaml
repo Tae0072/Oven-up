@@ -44,6 +44,11 @@ dependencies:
   # 모바일 결제창 — PortOne 공식 SDK (웹은 index.html의 JS SDK 사용)
   portone_flutter: ^1.0.1
 
+# 최신 AGP에서 flutter_inappwebview 1.1.3(안드로이드)의 proguard 설정이 깨져서,
+# 수정이 들어간 베타 버전으로 강제 지정한다. 정식판이 나오면 제거할 것.
+dependency_overrides:
+  flutter_inappwebview: 6.2.0-beta.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
