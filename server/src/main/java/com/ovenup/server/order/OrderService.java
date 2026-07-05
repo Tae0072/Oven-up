@@ -153,6 +153,49 @@ public class OrderService {
                 .toList();
     }
 
+    // ===== 관리자(사장님)용 =====
+    // 관리자가 상태를 바꿀 수 있는 값 (결제대기/결제완료는 결제 흐름이 정하므로 제외)
+    private static final Set<String> ADMIN_STATUSES =
+            Set.of("준비중", "준비완료", "픽업완료", "배달중", "배달완료", "취소");
+
+    /** 관리자: 전체(또는 상태별) 주문 목록 */
+    @Transactional(readOnly = true)
+    public List<OrderSummary> adminList(String status) {
+        List<OrderEntity> orders = (status == null || status.isBlank())
+                ? orderRepository.findAllByOrderByIdDesc()
+                : orderRepository.findByStatusOrderByIdDesc(status);
+        return orders.stream()
+                .map(o -> new OrderSummary(o.getId(), o.getOrderNo(), o.getTotalPrice(),
+                        o.getFulfillmentType(), o.getScheduledAt(), o.getStatus(), o.getCreatedAt()))
+                .toList();
+    }
+
+    /** 관리자: 주문 상세 (소유권 검사 없음) */
+    @Transactional(readOnly = true)
+    public OrderDetail adminDetail(long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
+        List<OrderItemView> items = order.getItems().stream()
+                .map(i -> new OrderItemView(i.getMenuName(), i.getUnitPrice(), i.getQuantity(), i.getOptionsDesc()))
+                .toList();
+        return new OrderDetail(order.getId(), order.getOrderNo(), order.getStatus(), order.getFulfillmentType(),
+                order.getScheduledAt(), order.getDeliveryAddress(), order.getTotalPrice(),
+                order.getDiscountPrice(), items);
+    }
+
+    /** 관리자: 주문 상태 변경 */
+    @Transactional
+    public OrderDetail updateStatus(long orderId, String status) {
+        if (status == null || !ADMIN_STATUSES.contains(status)) {
+            throw ApiException.badRequest("INVALID_INPUT", "변경할 수 없는 상태입니다.");
+        }
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
+        order.changeStatus(status);
+        orderRepository.save(order);
+        return adminDetail(orderId);
+    }
+
     @Transactional(readOnly = true)
     public OrderDetail orderDetail(Long userId, long orderId) {
         OrderEntity order = orderRepository.findById(orderId)

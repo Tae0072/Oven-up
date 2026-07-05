@@ -83,6 +83,11 @@ public class OrderEntity {
         this.orderNo = orderNo;
     }
 
+    /** 관리자가 주문 상태를 바꾼다(준비중/준비완료/픽업완료/배달중/배달완료/취소). */
+    public void changeStatus(String status) {
+        this.status = status;
+    }
+
     /** 결제 완료 처리: 상태를 '결제완료'로 바꾸고 결제 수단·시각을 기록한다. */
     public void markPaid(String paymentMethod) {
         this.status = "결제완료";
