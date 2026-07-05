@@ -196,6 +196,19 @@ class AdminApi {
     }
   }
 
+  // ===== 대시보드 통계 (A5) =====
+
+  /// 관리자 대시보드 통계 조회
+  Future<DashboardStats> fetchStats(String token) async {
+    final res = await _client.get(Uri.parse('$kApiBaseUrl/api/admin/stats'),
+        headers: {'Authorization': 'Bearer $token'});
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '통계를 불러오지 못했어요'));
+    }
+    return DashboardStats.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
   String _errorMessage(Map<String, dynamic> body, String fallback) {
     final error = body['error'];
     if (error is Map && error['message'] is String) {
@@ -203,6 +216,95 @@ class AdminApi {
     }
     return fallback;
   }
+}
+
+/// 대시보드 통계 (05_API /api/admin/stats)
+class DashboardStats {
+  final int todaySales;
+  final int todayOrders;
+  final int weekSales;
+  final int weekOrders;
+  final int totalSales;
+  final int totalOrders;
+  final List<DailyPoint> daily;
+  final List<StatusCount> statusCounts;
+  final List<TopMenu> topMenus;
+
+  const DashboardStats({
+    required this.todaySales,
+    required this.todayOrders,
+    required this.weekSales,
+    required this.weekOrders,
+    required this.totalSales,
+    required this.totalOrders,
+    required this.daily,
+    required this.statusCounts,
+    required this.topMenus,
+  });
+
+  factory DashboardStats.fromJson(Map<String, dynamic> j) => DashboardStats(
+        todaySales: (j['todaySales'] as num?)?.toInt() ?? 0,
+        todayOrders: (j['todayOrders'] as num?)?.toInt() ?? 0,
+        weekSales: (j['weekSales'] as num?)?.toInt() ?? 0,
+        weekOrders: (j['weekOrders'] as num?)?.toInt() ?? 0,
+        totalSales: (j['totalSales'] as num?)?.toInt() ?? 0,
+        totalOrders: (j['totalOrders'] as num?)?.toInt() ?? 0,
+        daily: (j['daily'] as List<dynamic>? ?? [])
+            .map((e) => DailyPoint.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        statusCounts: (j['statusCounts'] as List<dynamic>? ?? [])
+            .map((e) => StatusCount.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        topMenus: (j['topMenus'] as List<dynamic>? ?? [])
+            .map((e) => TopMenu.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class DailyPoint {
+  final String date; // yyyy-MM-dd
+  final int sales;
+  final int orders;
+
+  const DailyPoint({required this.date, required this.sales, required this.orders});
+
+  factory DailyPoint.fromJson(Map<String, dynamic> j) => DailyPoint(
+        date: (j['date'] as String?) ?? '',
+        sales: (j['sales'] as num?)?.toInt() ?? 0,
+        orders: (j['orders'] as num?)?.toInt() ?? 0,
+      );
+
+  /// 그래프 라벨용: 'MM.dd'의 dd (일)
+  String get dayLabel {
+    final parts = date.split('-');
+    return parts.length == 3 ? parts[2] : date;
+  }
+}
+
+class StatusCount {
+  final String status;
+  final int count;
+
+  const StatusCount({required this.status, required this.count});
+
+  factory StatusCount.fromJson(Map<String, dynamic> j) => StatusCount(
+        status: (j['status'] as String?) ?? '',
+        count: (j['count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class TopMenu {
+  final String menuName;
+  final int quantity;
+  final int sales;
+
+  const TopMenu({required this.menuName, required this.quantity, required this.sales});
+
+  factory TopMenu.fromJson(Map<String, dynamic> j) => TopMenu(
+        menuName: (j['menuName'] as String?) ?? '',
+        quantity: (j['quantity'] as num?)?.toInt() ?? 0,
+        sales: (j['sales'] as num?)?.toInt() ?? 0,
+      );
 }
 
 /// 관리자 쿠폰 정보

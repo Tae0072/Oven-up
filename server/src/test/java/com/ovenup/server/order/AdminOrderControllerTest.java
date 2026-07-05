@@ -79,6 +79,36 @@ class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.data.status").value("준비중"));
     }
 
+    /** 주문을 만들고 결제까지 완료 → 매출 집계 대상이 된다. */
+    private void createAndPay(String userToken) throws Exception {
+        long orderId = createOrder(userToken);
+        mockMvc.perform(post("/api/orders/" + orderId + "/pay").header("Authorization", "Bearer " + userToken)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"method\":\"CARD\",\"paymentRef\":\"\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void adminStatsReflectsPaidOrders() throws Exception {
+        createAndPay(userToken("stat_user1@oven.com"));
+        String admin = adminToken();
+
+        mockMvc.perform(get("/api/admin/stats").header("Authorization", "Bearer " + admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalOrders").isNumber())
+                .andExpect(jsonPath("$.data.todaySales").isNumber())
+                .andExpect(jsonPath("$.data.daily").isArray())
+                .andExpect(jsonPath("$.data.daily.length()").value(7))
+                .andExpect(jsonPath("$.data.topMenus").isArray())
+                .andExpect(jsonPath("$.data.statusCounts").isArray());
+    }
+
+    @Test
+    void statsForbiddenForNonAdmin() throws Exception {
+        String u = userToken("stat_user2@oven.com");
+        mockMvc.perform(get("/api/admin/stats").header("Authorization", "Bearer " + u))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void adminRejectsInvalidStatus() throws Exception {
         long orderId = createOrder(userToken("adm_user3@oven.com"));
