@@ -4,6 +4,7 @@ import '../data/api_menu_repository.dart';
 import '../data/menu_repository.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
+import 'admin_orders_page.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 import 'login_page.dart';
@@ -80,6 +81,18 @@ class MyPage extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1),
+              if (isAdmin) ...[
+                Container(
+                  color: AppColors.bg,
+                  child: ListTile(
+                    leading: const Icon(Icons.storefront, color: AppColors.primary),
+                    title: const Text('주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _push(context, const AdminOrdersPage()),
+                  ),
+                ),
+                const Divider(height: 1),
+              ],
               ListTile(
                 leading: const Icon(Icons.receipt_long),
                 title: const Text('주문 내역'),
