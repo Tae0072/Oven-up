@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../data/notification_api.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
+import 'notifications_page.dart';
 
 /// S2. 홈(홈페이지) — 앱을 열면 처음 보이는 대문 화면.
 /// 브랜드 소개 + 배너 + 바로가기(메뉴 주문/예약/단체 주문/고객의 소리).
@@ -36,7 +38,10 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('오븐업 5VEN UP')),
+      appBar: AppBar(
+        title: const Text('오븐업 5VEN UP'),
+        actions: const [NotificationBell()],
+      ),
       body: ListView(
         children: [
           // 대표 배너
@@ -158,6 +163,71 @@ class _ShortcutCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 홈 상단 알림 종 아이콘 + 안읽음 배지
+class NotificationBell extends StatefulWidget {
+  const NotificationBell({super.key});
+
+  @override
+  State<NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<NotificationBell> {
+  final NotificationApi _api = NotificationApi();
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    final token = AuthStore.instance.token;
+    if (token == null) return;
+    final c = await _api.unreadCount(token);
+    if (!mounted) return;
+    setState(() => _unread = c);
+  }
+
+  Future<void> _open() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const NotificationsPage()),
+    );
+    _refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          tooltip: '알림',
+          onPressed: _open,
+        ),
+        if (_unread > 0)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: Text(
+                  _unread > 99 ? '99+' : '$_unread',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
