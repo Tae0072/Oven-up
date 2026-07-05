@@ -6,6 +6,7 @@ Future<String> requestPaymentWeb({
   required String orderName,
   required int amount,
   required String payMethod,
+  required String channelKey,
 }) {
   throw UnsupportedError('웹에서만 지원하는 결제 방식입니다.');
 }

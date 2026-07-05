@@ -17,10 +17,11 @@ Future<String> requestPaymentWeb({
   required String orderName,
   required int amount,
   required String payMethod,
+  required String channelKey,
 }) async {
   final options = <String, Object?>{
     'storeId': kPortoneStoreId,
-    'channelKey': kPortoneChannelKey,
+    'channelKey': channelKey,
     'paymentId': paymentId,
     'orderName': orderName,
     'totalAmount': amount,
