@@ -125,6 +125,33 @@ class AuthApi {
     }
   }
 
+  /// 알림 켜기/끄기 (05_API §2.5)
+  Future<MyProfile> setNotifyEnabled({required String token, required bool enabled}) async {
+    final res = await _client.patch(
+      Uri.parse('$kApiBaseUrl/api/users/me/notify'),
+      headers: {..._jsonHeader, 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'enabled': enabled}),
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '알림 설정에 실패했어요'));
+    }
+    return MyProfile.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
+  /// 회원 탈퇴 (05_API §2.5). 현재 비밀번호 확인 필요.
+  Future<void> deleteAccount({required String token, required String currentPassword}) async {
+    final res = await _client.delete(
+      Uri.parse('$kApiBaseUrl/api/users/me'),
+      headers: {..._jsonHeader, 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'currentPassword': currentPassword}),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      throw ApiException(_errorMessage(body, '회원 탈퇴에 실패했어요'));
+    }
+  }
+
   String _errorMessage(Map<String, dynamic> body, String fallback) {
     final error = body['error'];
     if (error is Map && error['message'] is String) {
@@ -141,6 +168,7 @@ class MyProfile {
   final String phone;
   final String role;
   final int pointBalance;
+  final bool notifyEnabled;
 
   const MyProfile({
     required this.email,
@@ -148,6 +176,7 @@ class MyProfile {
     required this.phone,
     required this.role,
     required this.pointBalance,
+    this.notifyEnabled = true,
   });
 
   factory MyProfile.fromJson(Map<String, dynamic> j) => MyProfile(
@@ -156,5 +185,6 @@ class MyProfile {
         phone: (j['phone'] as String?) ?? '',
         role: (j['role'] as String?) ?? 'USER',
         pointBalance: (j['pointBalance'] as num?)?.toInt() ?? 0,
+        notifyEnabled: (j['notifyEnabled'] as bool?) ?? true,
       );
 }

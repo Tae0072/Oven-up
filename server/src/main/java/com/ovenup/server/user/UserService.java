@@ -40,8 +40,30 @@ public class UserService {
         UserEntity user = requireUser(userId);
         user.updateProfile(request.name().trim(), request.phone() == null ? "" : request.phone().trim());
         userRepository.save(user);
+        return toProfile(user);
+    }
+
+    @Transactional
+    public MyProfile setNotifyEnabled(Long userId, boolean enabled) {
+        UserEntity user = requireUser(userId);
+        user.setNotifyEnabled(enabled);
+        userRepository.save(user);
+        return toProfile(user);
+    }
+
+    /** 회원 탈퇴: 현재 비밀번호 확인 후 계정 삭제. */
+    @Transactional
+    public void deleteAccount(Long userId, String currentPassword) {
+        UserEntity user = requireUser(userId);
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw ApiException.badRequest("PASSWORD_MISMATCH", "현재 비밀번호가 올바르지 않습니다.");
+        }
+        userRepository.delete(user);
+    }
+
+    private MyProfile toProfile(UserEntity user) {
         return new MyProfile(user.getId(), user.getEmail(), user.getName(),
-                user.getPhone(), user.getRole(), user.getPointBalance());
+                user.getPhone(), user.getRole(), user.getPointBalance(), user.isNotifyEnabled());
     }
 
     @Transactional
