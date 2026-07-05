@@ -56,6 +56,23 @@ public class UserEntity {
         this.role = role;
     }
 
+    /** 적립금 지급 */
+    public void addPoints(int amount) {
+        if (amount > 0) {
+            this.pointBalance += amount;
+        }
+    }
+
+    /** 적립금 사용(차감). 잔액보다 많이 쓰지 않도록 호출 전에 검증한다. */
+    public void usePoints(int amount) {
+        if (amount > 0) {
+            this.pointBalance -= amount;
+            if (this.pointBalance < 0) {
+                this.pointBalance = 0;
+            }
+        }
+    }
+
     public Long getId() {
         return id;
     }

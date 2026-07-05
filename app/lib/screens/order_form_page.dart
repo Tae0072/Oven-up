@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
 import '../data/order_api.dart';
+import '../data/promo_api.dart';
 import '../state/auth_store.dart';
 import '../state/cart.dart';
+import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'login_page.dart';
 import 'payment_page.dart';
@@ -29,6 +31,7 @@ class OrderFormPage extends StatefulWidget {
 
 class _OrderFormPageState extends State<OrderFormPage> {
   final OrderApi _orderApi = OrderApi();
+  final PromoApi _promoApi = PromoApi();
 
   FulfillmentType _fulfillment = FulfillmentType.takeout;
   bool _isReservation = false;
@@ -37,11 +40,37 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _requestController = TextEditingController();
+  final TextEditingController _couponController = TextEditingController();
+  final TextEditingController _pointsController = TextEditingController();
+
+  int _couponDiscount = 0;
+  String? _appliedCoupon;
+  String? _couponMsg; // 쿠폰 안내(성공/실패)
+  int _pointsBalance = 0;
+  bool _checkingCoupon = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPoints());
+  }
+
+  Future<void> _loadPoints() async {
+    final token = AuthStore.instance.token;
+    if (token == null) return;
+    try {
+      final p = await _promoApi.fetchPoints(token);
+      if (!mounted) return;
+      setState(() => _pointsBalance = p.balance);
+    } catch (_) {/* 무시 */}
+  }
 
   @override
   void dispose() {
     _addressController.dispose();
     _requestController.dispose();
+    _couponController.dispose();
+    _pointsController.dispose();
     super.dispose();
   }
 
@@ -51,8 +80,47 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
   bool get _deliveryQtyOk => _sandwichCount >= kMinSandwichForDelivery;
 
-  int get _finalPrice =>
-      Cart.instance.totalPrice + (_isDelivery ? kDeliveryFee : 0);
+  int get _grossPrice => Cart.instance.totalPrice + (_isDelivery ? kDeliveryFee : 0);
+
+  /// 입력한 적립금 사용액을 잔액·남은금액 범위로 자른 값
+  int get _pointsUsed {
+    final entered = int.tryParse(_pointsController.text.trim()) ?? 0;
+    final maxUsable = (_grossPrice - _couponDiscount).clamp(0, _pointsBalance);
+    return entered.clamp(0, maxUsable);
+  }
+
+  int get _finalPrice => (_grossPrice - _couponDiscount - _pointsUsed).clamp(0, 1 << 30);
+
+  Future<void> _applyCoupon() async {
+    final code = _couponController.text.trim();
+    final token = AuthStore.instance.token;
+    if (code.isEmpty || token == null) return;
+    setState(() => _checkingCoupon = true);
+    try {
+      final r = await _promoApi.checkCoupon(token, code, amount: _grossPrice);
+      if (!mounted) return;
+      setState(() {
+        _checkingCoupon = false;
+        if (r.valid) {
+          _couponDiscount = r.discount;
+          _appliedCoupon = code;
+          _couponMsg = '쿠폰 적용! ${formatPrice(r.discount)} 할인';
+        } else {
+          _couponDiscount = 0;
+          _appliedCoupon = null;
+          _couponMsg = r.message ?? '사용할 수 없는 쿠폰이에요.';
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checkingCoupon = false;
+        _couponDiscount = 0;
+        _appliedCoupon = null;
+        _couponMsg = '쿠폰을 확인하지 못했어요.';
+      });
+    }
+  }
 
   bool get _canPay {
     if (Cart.instance.isEmpty) return false;
@@ -131,6 +199,8 @@ class _OrderFormPageState extends State<OrderFormPage> {
             : null,
         deliveryAddress: _isDelivery ? _addressController.text.trim() : null,
         requestMsg: _requestController.text.trim(),
+        couponCode: _appliedCoupon,
+        usePoints: _pointsUsed,
       );
       if (!mounted) return;
       Cart.instance.clear();
@@ -253,8 +323,70 @@ class _OrderFormPageState extends State<OrderFormPage> {
               ),
               const Divider(height: 32),
 
+              _sectionTitle('쿠폰 · 적립'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _couponController,
+                      decoration: const InputDecoration(
+                        labelText: '쿠폰 코드',
+                        hintText: '예: WELCOME3000',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(
+                    onPressed: _checkingCoupon ? null : _applyCoupon,
+                    child: _checkingCoupon
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('적용'),
+                  ),
+                ],
+              ),
+              if (_couponMsg != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _couponMsg!,
+                    style: TextStyle(
+                      color: _appliedCoupon != null ? AppColors.primary : Colors.red[700],
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _pointsController,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: '적립금 사용 (보유 ${formatPrice(_pointsBalance)})',
+                  hintText: '0',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              if (_pointsBalance > 0)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      _pointsController.text =
+                          (_grossPrice - _couponDiscount).clamp(0, _pointsBalance).toString();
+                      setState(() {});
+                    },
+                    child: const Text('모두 사용'),
+                  ),
+                ),
+              const Divider(height: 32),
+
               _amountRow('상품 금액', Cart.instance.totalPrice),
               if (_isDelivery) _amountRow('배달비', kDeliveryFee),
+              if (_couponDiscount > 0) _discountRow('쿠폰 할인', _couponDiscount),
+              if (_pointsUsed > 0) _discountRow('적립금 사용', _pointsUsed),
               const SizedBox(height: 4),
               _amountRow('최종 결제금액', _finalPrice, bold: true),
             ],
@@ -303,6 +435,20 @@ class _OrderFormPageState extends State<OrderFormPage> {
         children: [
           Text(label, style: style),
           Text(formatPrice(amount), style: style),
+        ],
+      ),
+    );
+  }
+
+  /// 할인/사용 금액 줄(빼는 금액이라 '- ' 표시, 포인트색)
+  Widget _discountRow(String label, int amount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.primary)),
+          Text('- ${formatPrice(amount)}', style: const TextStyle(color: AppColors.primary)),
         ],
       ),
     );

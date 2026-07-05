@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ovenup.server.cart.CartLineComputed;
 import com.ovenup.server.cart.CartService;
 import com.ovenup.server.common.ApiException;
+import com.ovenup.server.coupon.CouponEntity;
+import com.ovenup.server.coupon.CouponService;
+import com.ovenup.server.user.UserEntity;
+import com.ovenup.server.user.UserRepository;
 import com.ovenup.server.order.dto.CreateOrderRequest;
 import com.ovenup.server.order.dto.DeliveryCheckRequest;
 import com.ovenup.server.order.dto.OrderResponses.DeliveryCheck;
@@ -44,13 +49,21 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final PaymentVerifier paymentVerifier;
     private final NotificationService notificationService;
+    private final CouponService couponService;
+    private final UserRepository userRepository;
+    private final int earnPercent;
 
     public OrderService(CartService cartService, OrderRepository orderRepository,
-                        PaymentVerifier paymentVerifier, NotificationService notificationService) {
+                        PaymentVerifier paymentVerifier, NotificationService notificationService,
+                        CouponService couponService, UserRepository userRepository,
+                        @Value("${app.point.earn-percent:1}") int earnPercent) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
         this.paymentVerifier = paymentVerifier;
         this.notificationService = notificationService;
+        this.couponService = couponService;
+        this.userRepository = userRepository;
+        this.earnPercent = earnPercent;
     }
 
     @Transactional
@@ -83,19 +96,41 @@ public class OrderService {
         }
 
         LocalDateTime scheduledAt = parseScheduledAt(request.scheduledAt());
-        int total = subtotal + deliveryFee;
+        int gross = subtotal + deliveryFee;
+
+        // 쿠폰 검증(있으면) → 할인액 (금액은 서버가 재계산, 조작 방지)
+        CouponEntity coupon = couponService.resolveForOrder(userId, request.couponCode(), gross);
+        int couponDiscount = coupon != null ? coupon.discountFor(gross) : 0;
+
+        // 적립금 사용(있으면) → 잔액과 남은 결제금액 범위로 제한
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다."));
+        int maxPoints = Math.max(0, Math.min(user.getPointBalance(), gross - couponDiscount));
+        int pointsUsed = Math.max(0, Math.min(request.usePoints(), maxPoints));
+
+        int discount = couponDiscount + pointsUsed;
+        int total = gross - discount;
 
         List<OrderItemEntity> items = lines.stream()
                 .map(l -> new OrderItemEntity(l.menuId(), l.menuName(), l.unitPrice(), l.quantity(), l.optionsDesc()))
                 .toList();
 
-        OrderEntity order = new OrderEntity(userId, total, 0, fulfillment, scheduledAt,
+        OrderEntity order = new OrderEntity(userId, total, discount, fulfillment, scheduledAt,
                 deliveryAddress, deliveryFee, request.requestMsg(), "결제대기",
                 new java.util.ArrayList<>(items));
         order = orderRepository.save(order);
         order.assignOrderNo(order.getCreatedAt().format(ORDER_NO_DATE)
                 + "-" + String.format("%04d", order.getId()));
         orderRepository.save(order);
+
+        // 적립금 차감 + 쿠폰 사용 기록
+        if (pointsUsed > 0) {
+            user.usePoints(pointsUsed);
+            userRepository.save(user);
+        }
+        if (coupon != null) {
+            couponService.redeem(coupon.getId(), userId, order.getId());
+        }
 
         // 주문이 만들어졌으니 장바구니를 비운다.
         cartService.clear(userId);
@@ -133,9 +168,22 @@ public class OrderService {
 
         order.markPaid(method);
         orderRepository.save(order);
+
+        // 결제금액의 일정 비율 적립 지급
+        int earn = (int) Math.floor(order.getTotalPrice() * (earnPercent / 100.0));
+        if (earn > 0) {
+            userRepository.findById(order.getUserId()).ifPresent(u -> {
+                u.addPoints(earn);
+                userRepository.save(u);
+            });
+        }
+
         // 손님에게 접수 알림
+        String paidBody = earn > 0
+                ? String.format("결제가 완료되어 주문이 접수됐어요. (%,d P 적립)", earn)
+                : "결제가 완료되어 주문이 접수됐어요.";
         notificationService.notifyUser(order.getUserId(), "주문 " + order.getOrderNo(),
-                "결제가 완료되어 주문이 접수됐어요.", "ORDER_PAID", order.getId());
+                paidBody, "ORDER_PAID", order.getId());
         return new PaymentDone(order.getId(), order.getOrderNo(), order.getStatus(), order.getPaymentMethod());
     }
 

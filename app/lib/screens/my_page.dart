@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../data/api_menu_repository.dart';
 import '../data/menu_repository.dart';
+import '../data/promo_api.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
+import '../utils/format.dart';
+import 'admin_coupons_page.dart';
 import 'admin_orders_page.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
@@ -80,15 +83,26 @@ class MyPage extends StatelessWidget {
                   ],
                 ),
               ),
+              const _PointsTile(),
               const Divider(height: 1),
               if (isAdmin) ...[
                 Container(
                   color: AppColors.bg,
-                  child: ListTile(
-                    leading: const Icon(Icons.storefront, color: AppColors.primary),
-                    title: const Text('주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _push(context, const AdminOrdersPage()),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.storefront, color: AppColors.primary),
+                        title: const Text('주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminOrdersPage()),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.local_activity, color: AppColors.primary),
+                        title: const Text('쿠폰 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminCouponsPage()),
+                      ),
+                    ],
                   ),
                 ),
                 const Divider(height: 1),
@@ -120,6 +134,54 @@ class MyPage extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// 마이페이지 상단 적립금 카드 (05_API §10)
+class _PointsTile extends StatefulWidget {
+  const _PointsTile();
+
+  @override
+  State<_PointsTile> createState() => _PointsTileState();
+}
+
+class _PointsTileState extends State<_PointsTile> {
+  final PromoApi _api = PromoApi();
+  int _balance = 0;
+  int _earnPercent = 0;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final token = AuthStore.instance.token;
+    if (token == null) return;
+    try {
+      final p = await _api.fetchPoints(token);
+      if (!mounted) return;
+      setState(() {
+        _balance = p.balance;
+        _earnPercent = p.earnPercent;
+        _loaded = true;
+      });
+    } catch (_) {/* 무시 */}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.savings, color: AppColors.primary),
+      title: const Text('내 적립금'),
+      subtitle: _earnPercent > 0 ? Text('결제 시 $_earnPercent% 적립') : null,
+      trailing: Text(
+        _loaded ? formatPrice(_balance) : '...',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
       ),
     );
   }
