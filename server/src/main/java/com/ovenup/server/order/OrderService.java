@@ -96,6 +96,7 @@ public class OrderService {
         }
 
         LocalDateTime scheduledAt = parseScheduledAt(request.scheduledAt());
+        validateReservation(scheduledAt);
         int gross = subtotal + deliveryFee;
 
         // 쿠폰 검증(있으면) → 할인액 (금액은 서버가 재계산, 조작 방지)
@@ -287,6 +288,25 @@ public class OrderService {
 
     private boolean isBuildingOk(String address) {
         return address != null && address.contains(DELIVERABLE_BUILDING);
+    }
+
+    // 영업시간 (예약 가능 시간대). 10:00 ~ 20:00 (마지막 예약 19:xx).
+    private static final int OPEN_HOUR = 10;
+    private static final int CLOSE_HOUR = 20;
+
+    /** 예약 시간 검증 (S9). null이면 지금 주문이라 통과. */
+    private void validateReservation(LocalDateTime scheduledAt) {
+        if (scheduledAt == null) {
+            return;
+        }
+        if (!scheduledAt.isAfter(LocalDateTime.now())) {
+            throw ApiException.badRequest("INVALID_RESERVATION", "예약 시간은 현재보다 이후여야 해요.");
+        }
+        int hour = scheduledAt.getHour();
+        if (hour < OPEN_HOUR || hour >= CLOSE_HOUR) {
+            throw ApiException.badRequest("INVALID_RESERVATION",
+                    String.format("예약은 영업시간(%d시~%d시) 안에서만 가능해요.", OPEN_HOUR, CLOSE_HOUR));
+        }
     }
 
     private LocalDateTime parseScheduledAt(String value) {

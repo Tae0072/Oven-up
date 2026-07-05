@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 import 'notifications_page.dart';
+import 'reservation_page.dart';
 
 /// S2. 홈(홈페이지) — 앱을 열면 처음 보이는 대문 화면.
 /// 브랜드 소개 + 배너 + 바로가기(메뉴 주문/예약/단체 주문/고객의 소리).
@@ -24,15 +25,10 @@ class HomePage extends StatelessWidget {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const InquiryListPage()));
   }
 
-  void _reserveInfo(BuildContext context) {
-    // 예약 주문은 주문서에서 '예약 주문 + 시간'을 선택하는 흐름이라, 메뉴로 안내한다.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('메뉴를 담고 주문서에서 예약 시간을 정할 수 있어요.'),
-        duration: Duration(seconds: 2),
-      ));
-    onGoToMenu();
+  void _openReservation(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ReservationPage(onGoToMenu: onGoToMenu),
+    ));
   }
 
   @override
@@ -104,7 +100,7 @@ class HomePage extends StatelessWidget {
                 _ShortcutCard(
                   icon: Icons.schedule,
                   label: '예약 주문',
-                  onTap: () => _reserveInfo(context),
+                  onTap: () => _openReservation(context),
                 ),
                 _ShortcutCard(
                   icon: Icons.groups,

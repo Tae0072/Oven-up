@@ -100,7 +100,27 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ];
           return ListTile(
             title: Text('${order.orderNo}  ·  ${fulfillmentLabel(order.fulfillmentType)}'),
-            subtitle: Text(subtitleParts.join('   ·   ')),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subtitleParts.join('   ·   ')),
+                if (order.scheduledAt != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule, size: 14, color: Colors.teal),
+                        const SizedBox(width: 4),
+                        Text(
+                          '예약 ${formatDateTime(order.scheduledAt!)}',
+                          style: const TextStyle(fontSize: 12.5, color: Colors.teal),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            isThreeLine: order.scheduledAt != null,
             trailing: Chip(
               label: Text(order.status),
               visualDensity: VisualDensity.compact,

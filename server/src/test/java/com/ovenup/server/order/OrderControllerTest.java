@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -118,6 +120,44 @@ class OrderControllerTest {
                         .content("{\"method\":\"BITCOIN\",\"paymentRef\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    private String futureAt(int plusDays, int hour) {
+        LocalDateTime dt = LocalDateTime.now().plusDays(plusDays)
+                .withHour(hour).withMinute(0).withSecond(0).withNano(0);
+        return dt.toString();
+    }
+
+    @Test
+    void reservationWithinBusinessHoursSucceeds() throws Exception {
+        String t = token("resv1@oven.com");
+        addToCart(t, 1, 2);
+        mockMvc.perform(post("/api/orders").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fulfillmentType\":\"TAKEOUT\",\"scheduledAt\":\"" + futureAt(1, 12) + "\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void reservationInPastRejected() throws Exception {
+        String t = token("resv2@oven.com");
+        addToCart(t, 1, 2);
+        mockMvc.perform(post("/api/orders").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fulfillmentType\":\"TAKEOUT\",\"scheduledAt\":\"" + futureAt(-1, 12) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_RESERVATION"));
+    }
+
+    @Test
+    void reservationOutsideBusinessHoursRejected() throws Exception {
+        String t = token("resv3@oven.com");
+        addToCart(t, 1, 2);
+        mockMvc.perform(post("/api/orders").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fulfillmentType\":\"TAKEOUT\",\"scheduledAt\":\"" + futureAt(1, 3) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_RESERVATION"));
     }
 
     @Test
