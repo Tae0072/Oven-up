@@ -38,6 +38,9 @@ dependencies:
   shared_preferences: ^2.2.0
   # 웹 브라우저 API(리다이렉트·sessionStorage) — 소셜 로그인(웹)용
   web: ^1.1.0
+  # 모바일(안드로이드/iOS) 소셜 로그인 SDK
+  kakao_flutter_sdk_user: ^2.0.0
+  flutter_naver_login: ^2.1.1
 
 dev_dependencies:
   flutter_test:

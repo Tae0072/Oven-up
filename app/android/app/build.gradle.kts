@@ -23,6 +23,14 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // ==== 소셜 로그인 키 주입 (환경변수로만, 커밋 금지) ====
+        // 카카오 커스텀 스킴(kakao{네이티브앱키}://oauth)용 — 키 없으면 빈 값(개발 mock 모드)
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = System.getenv("KAKAO_NATIVE_APP_KEY") ?: ""
+        // 네이버 SDK가 읽는 문자열 리소스 — 키 없으면 빈 값
+        resValue("string", "naver_client_id", System.getenv("NAVER_CLIENT_ID") ?: "")
+        resValue("string", "naver_client_secret", System.getenv("NAVER_CLIENT_SECRET") ?: "")
+        resValue("string", "naver_client_name", "오븐업")
     }
 
     buildTypes {

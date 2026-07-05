@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 
 import '../data/api_exception.dart';
 import '../data/api_menu_repository.dart';
 import '../data/auth_api.dart';
 import '../data/menu_repository.dart';
 import '../data/social_auth.dart';
+import '../data/social_auth_mobile.dart';
 import '../state/auth_store.dart';
 import 'main_shell.dart';
 
@@ -112,7 +114,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   /// 소셜 로그인.
-  /// - 키가 주입돼 있으면(웹): 실제 카카오/네이버 로그인 페이지로 이동 (돌아오면 initState에서 마무리)
+  /// - 웹 + 키 주입: 카카오/네이버 로그인 페이지로 이동 (돌아오면 initState에서 마무리)
+  /// - 모바일 + 키 주입: 공식 SDK 로그인 → 받은 토큰을 서버로 전달
   /// - 키가 없으면: 기존 dev mock 토큰으로 로그인 (테스트/CI용)
   Future<void> _social(String provider, String devToken) async {
     if (SocialAuth.isRealEnabled(provider)) {
@@ -125,10 +128,16 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
     try {
-      final result = await _authApi.socialLogin(provider: provider, accessToken: devToken);
+      String accessToken = devToken;
+      if (SocialAuth.isMobileRealEnabled(provider)) {
+        accessToken = await SocialMobileAuth.login(provider); // SDK 로그인
+      }
+      final result = await _authApi.socialLogin(provider: provider, accessToken: accessToken);
       _applyLogin(result);
     } on ApiException catch (e) {
       _showError(e.message);
+    } on PlatformException catch (e) {
+      _showError(e.message ?? '소셜 로그인이 취소되었어요.');
     } catch (_) {
       _showError('서버에 연결하지 못했어요. 서버가 켜져 있는지 확인해 주세요.');
     } finally {
@@ -261,7 +270,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            SocialAuth.isRealEnabled('kakao') || SocialAuth.isRealEnabled('naver')
+            SocialAuth.isRealEnabled('kakao') ||
+                    SocialAuth.isRealEnabled('naver') ||
+                    SocialAuth.isMobileRealEnabled('kakao') ||
+                    SocialAuth.isMobileRealEnabled('naver')
                 ? '※ 카카오·네이버 계정으로 안전하게 로그인합니다.'
                 : '※ 카카오·네이버는 현재 개발용 임시 로그인입니다. 실행 시 키를 주입하면 실제 로그인이 켜집니다.',
             style: TextStyle(color: Colors.grey[600], fontSize: 12),

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' show KakaoSdk;
 
 import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
@@ -12,6 +14,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 카카오/네이버 로그인에서 막 돌아온 경우(주소에 ?code=...) 그 값을 먼저 챙겨둔다.
   SocialAuth.captureRedirectCallback();
+  // 모바일: 카카오 SDK 초기화 (키가 주입된 경우에만 — 없으면 dev mock 로그인)
+  if (!kIsWeb && kKakaoNativeAppKey.isNotEmpty) {
+    KakaoSdk.init(nativeAppKey: kKakaoNativeAppKey);
+  }
   await AuthStore.instance.load();
   runApp(OvenUpApp());
 }

@@ -13,6 +13,10 @@ import 'social_auth_platform_stub.dart'
 const String kKakaoRestApiKey = String.fromEnvironment('KAKAO_REST_API_KEY');
 const String kNaverClientId = String.fromEnvironment('NAVER_CLIENT_ID');
 
+/// 모바일(안드로이드/iOS) SDK용 카카오 네이티브 앱 키.
+/// 네이버 모바일은 빌드 시 환경변수(NAVER_CLIENT_ID/SECRET)로 매니페스트에 주입된다.
+const String kKakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
+
 /// 소셜 로그인 후 돌아왔을 때 주소에 실려 오는 값(인가 코드).
 class SocialCallback {
   final String provider; // kakao | naver
@@ -42,6 +46,12 @@ class SocialAuth {
   static bool isRealEnabled(String provider) {
     if (!kIsWeb) return false;
     return provider == 'naver' ? kNaverClientId.isNotEmpty : kKakaoRestApiKey.isNotEmpty;
+  }
+
+  /// 모바일(안드로이드/iOS)에서 SDK 로그인이 가능한 상태인가? (키 주입됨)
+  static bool isMobileRealEnabled(String provider) {
+    if (kIsWeb) return false;
+    return provider == 'naver' ? kNaverClientId.isNotEmpty : kKakaoNativeAppKey.isNotEmpty;
   }
 
   /// 인가 요청에 쓰는 리다이렉트 주소 = 현재 앱 주소(origin).
