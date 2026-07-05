@@ -78,6 +78,20 @@ class MenuCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if (item.soldOut) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '품절',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -97,7 +111,10 @@ class MenuCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton(onPressed: onAdd, child: const Text('담기')),
+              FilledButton(
+                onPressed: item.soldOut ? null : onAdd,
+                child: Text(item.soldOut ? '품절' : '담기'),
+              ),
             ],
           ),
         ),

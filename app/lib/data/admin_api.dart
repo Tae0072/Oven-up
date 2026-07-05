@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/menu_item.dart';
 import '../models/order_detail.dart';
 import '../models/order_summary.dart';
 import 'api_config.dart';
@@ -96,6 +97,102 @@ class AdminApi {
     if (res.statusCode != 201) {
       final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       throw ApiException(_errorMessage(body, '쿠폰 발급에 실패했어요'));
+    }
+  }
+
+  // ===== 메뉴 관리 (A3) =====
+
+  /// 전체 메뉴(품절 포함)
+  Future<List<MenuItem>> fetchMenus(String token) async {
+    final res = await _client.get(Uri.parse('$kApiBaseUrl/api/admin/menus'),
+        headers: {'Authorization': 'Bearer $token'});
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '메뉴 목록을 불러오지 못했어요'));
+    }
+    return (body['data'] as List<dynamic>)
+        .map((e) => MenuItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Map<String, dynamic> _menuPayload({
+    required String name,
+    required String description,
+    required int price,
+    required String bread,
+    required String emoji,
+    required bool best,
+  }) =>
+      {
+        'name': name,
+        'description': description,
+        'price': price,
+        'category': '샌드위치',
+        'bread': bread,
+        'emoji': emoji.isEmpty ? '🥪' : emoji,
+        'best': best,
+      };
+
+  /// 메뉴 등록
+  Future<void> createMenu(String token,
+      {required String name,
+      required String description,
+      required int price,
+      required String bread,
+      required String emoji,
+      required bool best}) async {
+    final res = await _client.post(
+      Uri.parse('$kApiBaseUrl/api/admin/menus'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(_menuPayload(
+          name: name, description: description, price: price, bread: bread, emoji: emoji, best: best)),
+    );
+    if (res.statusCode != 201) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '메뉴 등록에 실패했어요'));
+    }
+  }
+
+  /// 메뉴 수정
+  Future<void> updateMenu(String token, int id,
+      {required String name,
+      required String description,
+      required int price,
+      required String bread,
+      required String emoji,
+      required bool best}) async {
+    final res = await _client.put(
+      Uri.parse('$kApiBaseUrl/api/admin/menus/$id'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(_menuPayload(
+          name: name, description: description, price: price, bread: bread, emoji: emoji, best: best)),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '메뉴 수정에 실패했어요'));
+    }
+  }
+
+  /// 품절/판매중 토글
+  Future<void> setSoldOut(String token, int id, bool soldOut) async {
+    final res = await _client.patch(
+      Uri.parse('$kApiBaseUrl/api/admin/menus/$id/soldout'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'soldOut': soldOut}),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '상태 변경에 실패했어요'));
+    }
+  }
+
+  /// 메뉴 삭제
+  Future<void> deleteMenu(String token, int id) async {
+    final res = await _client.delete(Uri.parse('$kApiBaseUrl/api/admin/menus/$id'),
+        headers: {'Authorization': 'Bearer $token'});
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>, '메뉴 삭제에 실패했어요'));
     }
   }
 
