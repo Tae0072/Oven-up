@@ -4,6 +4,7 @@ import '../data/api_exception.dart';
 import '../data/api_menu_repository.dart';
 import '../data/auth_api.dart';
 import '../data/menu_repository.dart';
+import '../data/social_auth.dart';
 import '../state/auth_store.dart';
 import 'main_shell.dart';
 
@@ -33,6 +34,46 @@ class _LoginPageState extends State<LoginPage> {
   bool _isSignup = false;
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // 카카오/네이버 로그인에서 막 돌아온 경우: 받은 인가 코드로 로그인을 마무리한다.
+    final callback = SocialAuth.pendingCallback;
+    final callbackError = SocialAuth.pendingError;
+    if (callback != null) {
+      SocialAuth.pendingCallback = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _completeSocialCallback(callback));
+    } else if (callbackError != null) {
+      SocialAuth.pendingError = null;
+      _error = callbackError;
+    }
+  }
+
+  /// 소셜 로그인에서 돌아온 뒤: 인가 코드를 서버로 보내 로그인 완료.
+  Future<void> _completeSocialCallback(SocialCallback callback) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await _authApi.socialLogin(
+        provider: callback.provider,
+        code: callback.code,
+        redirectUri: SocialAuth.redirectUri,
+        state: callback.state,
+      );
+      _applyLogin(result);
+    } on ApiException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('서버에 연결하지 못했어요. 서버가 켜져 있는지 확인해 주세요.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -70,8 +111,15 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  /// 소셜 로그인 (지금은 dev mock 토큰 사용)
+  /// 소셜 로그인.
+  /// - 키가 주입돼 있으면(웹): 실제 카카오/네이버 로그인 페이지로 이동 (돌아오면 initState에서 마무리)
+  /// - 키가 없으면: 기존 dev mock 토큰으로 로그인 (테스트/CI용)
   Future<void> _social(String provider, String devToken) async {
+    if (SocialAuth.isRealEnabled(provider)) {
+      setState(() => _loading = true);
+      SocialAuth.start(provider); // 페이지 전체가 카카오/네이버로 이동한다
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -213,7 +261,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '※ 카카오·네이버는 현재 개발용 임시 로그인입니다. 실제 연결은 앱 등록 후 붙습니다.',
+            SocialAuth.isRealEnabled('kakao') || SocialAuth.isRealEnabled('naver')
+                ? '※ 카카오·네이버 계정으로 안전하게 로그인합니다.'
+                : '※ 카카오·네이버는 현재 개발용 임시 로그인입니다. 실행 시 키를 주입하면 실제 로그인이 켜집니다.',
             style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],
