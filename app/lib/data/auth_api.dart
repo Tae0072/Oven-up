@@ -59,12 +59,26 @@ class AuthApi {
   }
 
   /// 소셜 로그인 (05_API §2.3). provider = 'kakao' | 'naver'.
-  /// accessToken 은 카카오/네이버에서 받은 토큰(지금은 dev mock 토큰).
-  Future<AuthResult> socialLogin({required String provider, required String accessToken}) async {
+  /// 두 방식 중 하나로 호출한다.
+  /// - accessToken: SDK로 직접 받은 토큰 (또는 dev mock 토큰)
+  /// - code(+redirectUri, state): 웹 리다이렉트 로그인의 인가 코드 → 서버가 토큰으로 교환
+  Future<AuthResult> socialLogin({
+    required String provider,
+    String? accessToken,
+    String? code,
+    String? redirectUri,
+    String? state,
+  }) async {
+    final payload = <String, String>{
+      'accessToken': ?accessToken,
+      'code': ?code,
+      'redirectUri': ?redirectUri,
+      'state': ?state,
+    };
     final res = await _client.post(
       Uri.parse('$kApiBaseUrl/api/auth/social/$provider'),
       headers: _jsonHeader,
-      body: jsonEncode({'accessToken': accessToken}),
+      body: jsonEncode(payload),
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     if (res.statusCode != 200) {

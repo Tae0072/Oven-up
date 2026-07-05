@@ -16,6 +16,7 @@ import com.ovenup.server.auth.dto.SocialLoginRequest;
 import com.ovenup.server.auth.dto.SocialLoginResponse;
 import com.ovenup.server.auth.dto.UserSummary;
 import com.ovenup.server.common.ApiException;
+import com.ovenup.server.social.SocialAuthCodeExchanger;
 import com.ovenup.server.social.SocialProfile;
 import com.ovenup.server.social.SocialProfileVerifier;
 import com.ovenup.server.user.SocialAccountEntity;
@@ -36,14 +37,17 @@ public class AuthService {
     private final SocialAccountRepository socialAccountRepository;
     private final JwtProvider jwtProvider;
     private final SocialProfileVerifier socialVerifier;
+    private final SocialAuthCodeExchanger socialCodeExchanger;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthService(UserRepository userRepository, SocialAccountRepository socialAccountRepository,
-                       JwtProvider jwtProvider, SocialProfileVerifier socialVerifier) {
+                       JwtProvider jwtProvider, SocialProfileVerifier socialVerifier,
+                       SocialAuthCodeExchanger socialCodeExchanger) {
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.jwtProvider = jwtProvider;
         this.socialVerifier = socialVerifier;
+        this.socialCodeExchanger = socialCodeExchanger;
     }
 
     @Transactional
@@ -83,7 +87,14 @@ public class AuthService {
         if (provider == null || !SOCIAL_PROVIDERS.contains(provider.toLowerCase())) {
             throw ApiException.badRequest("UNSUPPORTED_PROVIDER", "지원하지 않는 소셜 로그인입니다.");
         }
-        SocialProfile profile = socialVerifier.verify(provider, request.accessToken());
+        // accessToken이 없고 인가 코드(code)가 오면(웹 리다이렉트 로그인), 먼저 코드를 토큰으로 교환한다.
+        String accessToken = request.accessToken();
+        if ((accessToken == null || accessToken.isBlank())
+                && request.code() != null && !request.code().isBlank()) {
+            accessToken = socialCodeExchanger.exchange(
+                    provider.toLowerCase(), request.code(), request.redirectUri(), request.state());
+        }
+        SocialProfile profile = socialVerifier.verify(provider, accessToken);
 
         // 1) 이미 연결된 소셜 계정이면 그 회원으로 로그인
         Optional<SocialAccountEntity> linked =

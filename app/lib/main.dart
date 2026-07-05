@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
+import 'data/social_auth.dart';
 import 'screens/splash_page.dart';
 import 'state/auth_store.dart';
 import 'theme/app_colors.dart';
@@ -9,6 +10,8 @@ import 'theme/app_colors.dart';
 Future<void> main() async {
   // 기기에 저장된 로그인 정보를 먼저 복원한 뒤 앱을 시작한다.
   WidgetsFlutterBinding.ensureInitialized();
+  // 카카오/네이버 로그인에서 막 돌아온 경우(주소에 ?code=...) 그 값을 먼저 챙겨둔다.
+  SocialAuth.captureRedirectCallback();
   await AuthStore.instance.load();
   runApp(OvenUpApp());
 }
