@@ -1,7 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
 import '../data/order_api.dart';
+import '../data/payment_config.dart';
+import '../data/portone_mobile_stub.dart'
+    if (dart.library.io) '../data/portone_mobile_real.dart' as portone_mobile;
+import '../data/portone_web_stub.dart'
+    if (dart.library.js_interop) '../data/portone_web_real.dart' as portone_web;
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
 import '../utils/format.dart';
@@ -49,9 +55,30 @@ class _PaymentPageState extends State<PaymentPage> {
     }
     setState(() => _paying = true);
     try {
-      // 개발용 모의 결제: 서버가 mock 검증으로 결제완료 처리한다.
-      // (실제 연동 시엔 여기서 PortOne 결제창을 띄우고 paymentRef를 받아 전달)
-      final done = await _orderApi.payOrder(token: token, orderId: widget.orderId, method: _method);
+      String? paymentRef;
+      if (isRealPaymentEnabled) {
+        // 실제 결제: PortOne 결제창 → 성공 시 paymentId 를 서버로 보내 검증한다.
+        final paymentId = 'ovenup-${widget.orderId}-${DateTime.now().millisecondsSinceEpoch}';
+        final orderName = '오븐업 주문 ${widget.orderNo}';
+        if (kIsWeb) {
+          paymentRef = await portone_web.requestPaymentWeb(
+            paymentId: paymentId,
+            orderName: orderName,
+            amount: widget.amount,
+            payMethod: portonePayMethod(_method),
+          );
+        } else {
+          paymentRef = await _payWithMobileSdk(paymentId, orderName);
+          if (paymentRef == null) {
+            // 사용자가 결제창을 닫거나 실패 → 결제 화면에 그대로 남는다.
+            if (mounted) setState(() => _paying = false);
+            return;
+          }
+        }
+      }
+      // mock 모드면 paymentRef 없이 바로 서버 호출(서버가 mock 검증으로 완료 처리)
+      final done = await _orderApi.payOrder(
+          token: token, orderId: widget.orderId, method: _method, paymentRef: paymentRef);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
@@ -62,11 +89,31 @@ class _PaymentPageState extends State<PaymentPage> {
       if (!mounted) return;
       setState(() => _paying = false);
       _snack(e.message);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _paying = false);
-      _snack('서버에 연결하지 못했어요.');
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _snack(msg.isEmpty || msg == 'null' ? '결제에 실패했어요.' : msg);
     }
+  }
+
+  /// 모바일: PortOne 결제창 화면을 띄우고, 성공하면 paymentId를 돌려받는다(취소 시 null).
+  Future<String?> _payWithMobileSdk(String paymentId, String orderName) {
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (routeCtx) => portone_mobile.buildPortonePaymentView(
+          paymentId: paymentId,
+          orderName: orderName,
+          amount: widget.amount,
+          payMethod: portonePayMethod(_method),
+          onSuccess: (id) => Navigator.of(routeCtx).pop(id),
+          onFail: (message) {
+            Navigator.of(routeCtx).pop();
+            _snack(message);
+          },
+        ),
+      ),
+    );
   }
 
   void _snack(String msg) {
@@ -128,9 +175,11 @@ class _PaymentPageState extends State<PaymentPage> {
               color: const Color(0xFFFFF6E0),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text(
-              '※ 지금은 개발용 모의 결제예요. 실제 결제창(카드·간편결제)은 결제사(PortOne) 연동 후 붙습니다.',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF8A6D1B)),
+            child: Text(
+              isRealPaymentEnabled
+                  ? '※ PortOne 결제창으로 안전하게 결제됩니다. (테스트 모드에서는 실제 돈이 빠져나가지 않아요)'
+                  : '※ 지금은 개발용 모의 결제예요. 실행 시 PortOne 키를 주입하면 실제 결제창이 열립니다.',
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A6D1B)),
             ),
           ),
         ],

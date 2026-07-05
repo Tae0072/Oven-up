@@ -27,6 +27,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- 결제 앱(카드사·간편결제)에서 돌아올 때 쓰는 앱 스킴 (PortOne appScheme=ovenup) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="ovenup"/>
+            </intent-filter>
         </activity>
         <!-- 카카오 로그인: 로그인 후 앱으로 돌아오는 통로 (kakao{네이티브앱키}://oauth) -->
         <activity
