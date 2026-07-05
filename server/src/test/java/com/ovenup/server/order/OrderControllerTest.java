@@ -81,6 +81,46 @@ class OrderControllerTest {
     }
 
     @Test
+    void payMarksOrderPaid() throws Exception {
+        String t = token("pay1@oven.com");
+        addToCart(t, 1, 2);
+        String created = mockMvc.perform(post("/api/orders").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"fulfillmentType\":\"TAKEOUT\"}"))
+                .andExpect(jsonPath("$.data.status").value("결제대기"))
+                .andReturn().getResponse().getContentAsString();
+        Object orderId = JsonPath.read(created, "$.data.orderId");
+
+        // mock 결제로 결제완료 처리
+        mockMvc.perform(post("/api/orders/" + orderId + "/pay").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"KAKAOPAY\",\"paymentRef\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("결제완료"))
+                .andExpect(jsonPath("$.data.paymentMethod").value("KAKAOPAY"));
+
+        // 이미 결제된 주문은 다시 결제 불가(409)
+        mockMvc.perform(post("/api/orders/" + orderId + "/pay").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"CARD\",\"paymentRef\":\"\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void payRejectsInvalidMethod() throws Exception {
+        String t = token("pay2@oven.com");
+        addToCart(t, 1, 1);
+        String created = mockMvc.perform(post("/api/orders").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"fulfillmentType\":\"TAKEOUT\"}"))
+                .andReturn().getResponse().getContentAsString();
+        Object orderId = JsonPath.read(created, "$.data.orderId");
+        mockMvc.perform(post("/api/orders/" + orderId + "/pay").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"BITCOIN\",\"paymentRef\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
     void listAndDetailReturnMyOrder() throws Exception {
         String t = token("order3@oven.com");
         addToCart(t, 1, 2);

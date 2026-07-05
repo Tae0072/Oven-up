@@ -49,6 +49,10 @@ public class OrderEntity {
 
     private String status;
 
+    private String paymentMethod; // 결제 수단 (CARD/KAKAOPAY/...), 결제 전엔 null
+
+    private LocalDateTime paidAt; // 결제 완료 시각, 결제 전엔 null
+
     private LocalDateTime createdAt;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
@@ -77,6 +81,21 @@ public class OrderEntity {
     /** 저장 후 id를 이용해 주문번호를 붙인다. */
     public void assignOrderNo(String orderNo) {
         this.orderNo = orderNo;
+    }
+
+    /** 결제 완료 처리: 상태를 '결제완료'로 바꾸고 결제 수단·시각을 기록한다. */
+    public void markPaid(String paymentMethod) {
+        this.status = "결제완료";
+        this.paymentMethod = paymentMethod;
+        this.paidAt = LocalDateTime.now();
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
     }
 
     public Long getId() {

@@ -6,6 +6,7 @@ import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../utils/format.dart';
 import 'login_page.dart';
+import 'payment_page.dart';
 
 /// 수령 방식 (05_API §4.2 fulfillmentType)
 enum FulfillmentType { dineIn, takeout, delivery }
@@ -118,10 +119,10 @@ class _OrderFormPageState extends State<OrderFormPage> {
       if (!AuthStore.instance.isLoggedIn) return; // 로그인 안 하고 돌아옴
     }
 
-    // 2) 주문 생성
+    // 2) 주문 생성 (결제대기) → 결제 화면(S7)으로 이동
     setState(() => _submitting = true);
     try {
-      final orderNo = await _orderApi.createOrder(
+      final created = await _orderApi.createOrder(
         token: AuthStore.instance.token!,
         lines: Cart.instance.lines,
         fulfillmentType: _fulfillmentCode(),
@@ -133,21 +134,15 @@ class _OrderFormPageState extends State<OrderFormPage> {
       );
       if (!mounted) return;
       Cart.instance.clear();
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('주문 완료'),
-          content: Text('주문번호: $orderNo\n결제 연동은 이후 단계에서 붙습니다.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('확인'),
-            ),
-          ],
+      await navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => PaymentPage(
+            orderId: created.orderId,
+            orderNo: created.orderNo,
+            amount: created.totalPrice,
+          ),
         ),
       );
-      if (!mounted) return;
-      navigator.popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       messenger
         ..hideCurrentSnackBar()
@@ -281,7 +276,7 @@ class _OrderFormPageState extends State<OrderFormPage> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : Text('${formatPrice(_finalPrice)} 주문하기'),
+                : Text('${formatPrice(_finalPrice)} 결제하기'),
           ),
         ),
       ),

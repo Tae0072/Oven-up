@@ -19,6 +19,8 @@ import com.ovenup.server.order.dto.OrderResponses.DeliveryCheck;
 import com.ovenup.server.order.dto.OrderResponses.OrderCreated;
 import com.ovenup.server.order.dto.OrderResponses.OrderDetail;
 import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
+import com.ovenup.server.payment.dto.PaymentDtos.PayRequest;
+import com.ovenup.server.payment.dto.PaymentDtos.PaymentDone;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -52,6 +54,13 @@ public class OrderController {
         Long userId = requireUserId(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(orderService.createOrder(userId, body)));
+    }
+
+    @PostMapping("/api/orders/{id}/pay")
+    public ApiResponse<PaymentDone> pay(HttpServletRequest request, @PathVariable long id,
+                                        @RequestBody PayRequest body) {
+        Long userId = requireUserId(request);
+        return ApiResponse.ok(orderService.pay(userId, id, body.method(), body.paymentRef()));
     }
 
     @PostMapping("/api/orders/delivery-check")

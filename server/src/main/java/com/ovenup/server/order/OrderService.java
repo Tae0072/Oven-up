@@ -19,6 +19,9 @@ import com.ovenup.server.order.dto.OrderResponses.OrderCreated;
 import com.ovenup.server.order.dto.OrderResponses.OrderDetail;
 import com.ovenup.server.order.dto.OrderResponses.OrderItemView;
 import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
+import com.ovenup.server.payment.PaymentResult;
+import com.ovenup.server.payment.PaymentVerifier;
+import com.ovenup.server.payment.dto.PaymentDtos.PaymentDone;
 
 /**
  * 주문 처리. (05_API §4, 03_기능_명세서 §4·§6)
@@ -32,14 +35,19 @@ public class OrderService {
     private static final int MIN_SANDWICH_FOR_DELIVERY = 2;
     private static final int DELIVERY_FEE = 0;
     private static final Set<String> FULFILLMENT_TYPES = Set.of("DINE_IN", "TAKEOUT", "DELIVERY");
+    private static final Set<String> PAYMENT_METHODS =
+            Set.of("CARD", "KAKAOPAY", "NAVERPAY", "TOSSPAY", "SAMSUNGPAY");
     private static final DateTimeFormatter ORDER_NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final CartService cartService;
     private final OrderRepository orderRepository;
+    private final PaymentVerifier paymentVerifier;
 
-    public OrderService(CartService cartService, OrderRepository orderRepository) {
+    public OrderService(CartService cartService, OrderRepository orderRepository,
+                        PaymentVerifier paymentVerifier) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
+        this.paymentVerifier = paymentVerifier;
     }
 
     @Transactional
@@ -90,6 +98,39 @@ public class OrderService {
         cartService.clear(userId);
 
         return new OrderCreated(order.getId(), order.getOrderNo(), order.getTotalPrice(), order.getStatus());
+    }
+
+    /**
+     * 주문 결제 (05_API §5). '결제대기' 주문을 결제 대행사에 검증한 뒤 '결제완료'로 바꾼다.
+     * 금액은 서버가 계산한 주문 금액 기준으로 재검증한다(화면 값 신뢰 금지).
+     */
+    @Transactional
+    public PaymentDone pay(Long userId, long orderId, String method, String paymentRef) {
+        if (method == null || !PAYMENT_METHODS.contains(method)) {
+            throw ApiException.badRequest("INVALID_INPUT", "결제 수단이 올바르지 않습니다.");
+        }
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> ApiException.notFound("ORDER_NOT_FOUND", "주문을 찾을 수 없습니다."));
+        if (!order.getUserId().equals(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN", "본인 주문만 결제할 수 있어요.");
+        }
+        if (!"결제대기".equals(order.getStatus())) {
+            throw ApiException.conflict("ALREADY_PROCESSED", "이미 결제되었거나 처리된 주문이에요.");
+        }
+
+        PaymentResult result = paymentVerifier.verify(method, paymentRef, order.getTotalPrice());
+        if (!result.success()) {
+            throw ApiException.badRequest("PAYMENT_FAILED",
+                    result.message() != null ? result.message() : "결제에 실패했어요.");
+        }
+        if (result.paidAmount() != order.getTotalPrice()) {
+            // 서버 금액과 실제 결제금액이 다르면 거부(조작 방지)
+            throw ApiException.badRequest("AMOUNT_MISMATCH", "결제 금액이 주문 금액과 일치하지 않아요.");
+        }
+
+        order.markPaid(method);
+        orderRepository.save(order);
+        return new PaymentDone(order.getId(), order.getOrderNo(), order.getStatus(), order.getPaymentMethod());
     }
 
     @Transactional(readOnly = true)
