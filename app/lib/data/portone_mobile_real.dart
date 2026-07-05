@@ -16,6 +16,7 @@ Widget buildPortonePaymentView({
   required String orderName,
   required int amount,
   required String payMethod,
+  required String channelKey,
   required void Function(String paymentId) onSuccess,
   required void Function(String message) onFail,
 }) {
@@ -24,7 +25,7 @@ Widget buildPortonePaymentView({
     initialChild: const Center(child: CircularProgressIndicator()),
     data: PaymentRequest(
       storeId: kPortoneStoreId,
-      channelKey: kPortoneChannelKey,
+      channelKey: channelKey,
       payMethod: payMethod == 'CARD' ? PaymentPayMethod.CARD : PaymentPayMethod.EASY_PAY,
       orderName: orderName,
       totalAmount: amount,

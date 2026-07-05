@@ -66,6 +66,7 @@ class _PaymentPageState extends State<PaymentPage> {
             orderName: orderName,
             amount: widget.amount,
             payMethod: portonePayMethod(_method),
+            channelKey: portoneChannelKey(_method),
           );
         } else {
           paymentRef = await _payWithMobileSdk(paymentId, orderName);
@@ -106,6 +107,7 @@ class _PaymentPageState extends State<PaymentPage> {
           orderName: orderName,
           amount: widget.amount,
           payMethod: portonePayMethod(_method),
+          channelKey: portoneChannelKey(_method),
           onSuccess: (id) => Navigator.of(routeCtx).pop(id),
           onFail: (message) {
             Navigator.of(routeCtx).pop();

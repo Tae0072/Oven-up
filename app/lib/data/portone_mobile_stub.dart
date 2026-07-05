@@ -8,6 +8,7 @@ Widget buildPortonePaymentView({
   required String orderName,
   required int amount,
   required String payMethod,
+  required String channelKey,
   required void Function(String paymentId) onSuccess,
   required void Function(String message) onFail,
 }) {
