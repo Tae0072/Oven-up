@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 서버(API) 호출용 인터넷 권한 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="oven_up_app"
+        android:label="오븐업"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
