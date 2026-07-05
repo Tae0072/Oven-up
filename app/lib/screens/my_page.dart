@@ -7,6 +7,7 @@ import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'admin_coupons_page.dart';
+import 'admin_dashboard_page.dart';
 import 'admin_menus_page.dart';
 import 'admin_orders_page.dart';
 import 'group_order_page.dart';
@@ -91,6 +92,12 @@ class MyPage extends StatelessWidget {
                   color: AppColors.bg,
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(Icons.insights, color: AppColors.primary),
+                        title: const Text('매출 대시보드 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminDashboardPage()),
+                      ),
                       ListTile(
                         leading: const Icon(Icons.storefront, color: AppColors.primary),
                         title: const Text('주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),

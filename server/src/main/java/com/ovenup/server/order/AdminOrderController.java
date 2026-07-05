@@ -15,6 +15,7 @@ import com.ovenup.server.common.ApiException;
 import com.ovenup.server.common.ApiResponse;
 import com.ovenup.server.order.dto.OrderResponses.OrderDetail;
 import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
+import com.ovenup.server.order.dto.StatsResponses.DashboardStats;
 import com.ovenup.server.order.dto.UpdateStatusRequest;
 import com.ovenup.server.user.UserEntity;
 import com.ovenup.server.user.UserRepository;
@@ -63,6 +64,13 @@ public class AdminOrderController {
     public ApiResponse<OrderDetail> detail(HttpServletRequest request, @PathVariable long id) {
         requireAdmin(request);
         return ApiResponse.ok(orderService.adminDetail(id));
+    }
+
+    /** 관리자 대시보드 통계 (A5): 매출·주문건수·상태별·인기 메뉴. */
+    @GetMapping("/api/admin/stats")
+    public ApiResponse<DashboardStats> stats(HttpServletRequest request) {
+        requireAdmin(request);
+        return ApiResponse.ok(orderService.adminStats());
     }
 
     @PatchMapping("/api/admin/orders/{id}/status")

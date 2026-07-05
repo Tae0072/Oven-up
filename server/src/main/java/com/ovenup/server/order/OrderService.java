@@ -1,5 +1,6 @@
 package com.ovenup.server.order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,6 +25,10 @@ import com.ovenup.server.order.dto.OrderResponses.OrderCreated;
 import com.ovenup.server.order.dto.OrderResponses.OrderDetail;
 import com.ovenup.server.order.dto.OrderResponses.OrderItemView;
 import com.ovenup.server.order.dto.OrderResponses.OrderSummary;
+import com.ovenup.server.order.dto.StatsResponses.DailyPoint;
+import com.ovenup.server.order.dto.StatsResponses.DashboardStats;
+import com.ovenup.server.order.dto.StatsResponses.StatusCount;
+import com.ovenup.server.order.dto.StatsResponses.TopMenu;
 import com.ovenup.server.notification.NotificationService;
 import com.ovenup.server.payment.PaymentResult;
 import com.ovenup.server.payment.PaymentVerifier;
@@ -265,6 +270,80 @@ public class OrderService {
             case "취소" -> "주문이 취소됐어요.";
             default -> "주문 상태가 '" + status + "'(으)로 바뀌었어요.";
         };
+    }
+
+    /**
+     * 관리자 대시보드 통계 (A5). 매출·주문건수는 "결제 완료(취소 제외)" 주문만 집계한다.
+     * DB 종류(H2/MySQL)에 상관없이 동작하도록 자바에서 계산한다(데이터가 크지 않음).
+     */
+    @Transactional(readOnly = true)
+    public DashboardStats adminStats() {
+        List<OrderEntity> all = orderRepository.findAll();
+        LocalDate today = LocalDate.now();
+        LocalDate weekStart = today.minusDays(6); // 오늘 포함 최근 7일
+
+        // 결제 완료(취소 제외) 주문 = 매출 집계 대상. 결제 시각(paidAt) 기준 날짜.
+        List<OrderEntity> paid = all.stream()
+                .filter(o -> o.getPaidAt() != null && !"취소".equals(o.getStatus()))
+                .toList();
+
+        long todaySales = 0;
+        int todayOrders = 0;
+        long weekSales = 0;
+        int weekOrders = 0;
+        long totalSales = 0;
+        int totalOrders = paid.size();
+        java.util.Map<LocalDate, long[]> byDay = new java.util.HashMap<>(); // [sales, orders]
+        java.util.Map<String, long[]> byMenu = new java.util.LinkedHashMap<>(); // [qty, sales]
+
+        for (OrderEntity o : paid) {
+            int amount = o.getTotalPrice();
+            totalSales += amount;
+            LocalDate day = o.getPaidAt().toLocalDate();
+            long[] d = byDay.computeIfAbsent(day, k -> new long[2]);
+            d[0] += amount;
+            d[1] += 1;
+            if (day.equals(today)) {
+                todaySales += amount;
+                todayOrders++;
+            }
+            if (!day.isBefore(weekStart)) {
+                weekSales += amount;
+                weekOrders++;
+            }
+            for (OrderItemEntity item : o.getItems()) {
+                long[] m = byMenu.computeIfAbsent(item.getMenuName(), k -> new long[2]);
+                m[0] += item.getQuantity();
+                m[1] += (long) item.getLineTotal();
+            }
+        }
+
+        // 최근 7일 일별 시리즈(오래된→최신, 매출 없는 날은 0)
+        List<DailyPoint> daily = new java.util.ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate day = today.minusDays(i);
+            long[] d = byDay.getOrDefault(day, new long[2]);
+            daily.add(new DailyPoint(day.toString(), d[0], (int) d[1]));
+        }
+
+        // 상태별 건수(전체 주문 기준 — 사장님이 처리 대기 흐름을 본다)
+        java.util.Map<String, Integer> statusMap = new java.util.LinkedHashMap<>();
+        for (OrderEntity o : all) {
+            statusMap.merge(o.getStatus(), 1, Integer::sum);
+        }
+        List<StatusCount> statusCounts = statusMap.entrySet().stream()
+                .map(e -> new StatusCount(e.getKey(), e.getValue()))
+                .toList();
+
+        // 인기 메뉴 TOP 5 (판매 수량 기준)
+        List<TopMenu> topMenus = byMenu.entrySet().stream()
+                .map(e -> new TopMenu(e.getKey(), (int) e.getValue()[0], e.getValue()[1]))
+                .sorted((a, b) -> Integer.compare(b.quantity(), a.quantity()))
+                .limit(5)
+                .toList();
+
+        return new DashboardStats(todaySales, todayOrders, weekSales, weekOrders,
+                totalSales, totalOrders, daily, statusCounts, topMenus);
     }
 
     @Transactional(readOnly = true)
