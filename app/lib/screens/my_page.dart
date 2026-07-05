@@ -8,6 +8,8 @@ import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'admin_coupons_page.dart';
 import 'admin_dashboard_page.dart';
+import 'admin_group_orders_page.dart';
+import 'admin_inquiries_page.dart';
 import 'admin_menus_page.dart';
 import 'admin_orders_page.dart';
 import 'group_order_page.dart';
@@ -124,6 +126,18 @@ class MyPage extends StatelessWidget {
                         title: const Text('쿠폰 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _push(context, const AdminCouponsPage()),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.forum, color: AppColors.primary),
+                        title: const Text('고객의 소리 답변 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminInquiriesPage()),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.groups, color: AppColors.primary),
+                        title: const Text('단체주문 관리 (사장님)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _push(context, const AdminGroupOrdersPage()),
                       ),
                     ],
                   ),
