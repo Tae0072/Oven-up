@@ -2,12 +2,14 @@ import '../utils/format.dart';
 
 /// 주문 상세의 항목 한 줄 (05_API §4.4)
 class OrderLineView {
+  final int menuId;
   final String menuName;
   final int unitPrice;
   final int quantity;
   final String optionsDesc;
 
   const OrderLineView({
+    required this.menuId,
     required this.menuName,
     required this.unitPrice,
     required this.quantity,
@@ -17,6 +19,7 @@ class OrderLineView {
   int get lineTotal => unitPrice * quantity;
 
   factory OrderLineView.fromJson(Map<String, dynamic> json) => OrderLineView(
+        menuId: (json['menuId'] as num?)?.toInt() ?? 0,
         menuName: (json['menuName'] as String?) ?? '',
         unitPrice: (json['unitPrice'] as num?)?.toInt() ?? 0,
         quantity: (json['quantity'] as num?)?.toInt() ?? 1,

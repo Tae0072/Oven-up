@@ -176,6 +176,7 @@ class OrderControllerTest {
         mockMvc.perform(get("/api/orders/" + orderId).header("Authorization", "Bearer " + t))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].menuId").value(1))
                 .andExpect(jsonPath("$.data.items[0].unitPrice").value(12900))
                 .andExpect(jsonPath("$.data.items[0].quantity").value(2));
     }
