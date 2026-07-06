@@ -58,21 +58,35 @@ public class AuthService {
         if (request.password() == null || request.password().length() < MIN_PASSWORD_LENGTH) {
             throw ApiException.badRequest("INVALID_INPUT", "비밀번호는 8자 이상이어야 합니다.");
         }
+        // 아이디가 없으면 이메일을 아이디로 쓴다 (하위호환 — 필수 입력은 앱 회원가입 화면이 검증).
+        String loginId = (request.loginId() == null || request.loginId().isBlank())
+                ? request.email().trim()
+                : request.loginId().trim();
         if (userRepository.existsByEmail(request.email())) {
             throw ApiException.conflict("EMAIL_DUPLICATED", "이미 사용 중인 이메일입니다.");
         }
+        if (userRepository.existsByLoginId(loginId)) {
+            throw ApiException.conflict("LOGIN_ID_DUPLICATED", "이미 사용 중인 아이디입니다.");
+        }
         String hashed = passwordEncoder.encode(request.password());
-        UserEntity saved = userRepository.save(
-                new UserEntity(request.email(), hashed, request.name(), request.phone()));
+        // 표시 이름: 이름이 없으면 아이디를 쓴다.
+        String name = (request.name() == null || request.name().isBlank()) ? loginId : request.name().trim();
+        String phone = request.phone() == null ? "" : request.phone().trim();
+        UserEntity user = new UserEntity(request.email().trim(), hashed, name, phone);
+        user.setSignupInfo(loginId, request.address() == null ? null : request.address().trim());
+        UserEntity saved = userRepository.save(user);
         return saved.getId();
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        UserEntity user = userRepository.findByEmail(
-                request.email() == null ? "" : request.email()).orElse(null);
+        // 아이디 또는 이메일 어느 쪽으로도 로그인할 수 있다.
+        String idOrEmail = request.email() == null ? "" : request.email().trim();
+        UserEntity user = userRepository.findByLoginId(idOrEmail)
+                .or(() -> userRepository.findByEmail(idOrEmail))
+                .orElse(null);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw ApiException.unauthorized("LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw ApiException.unauthorized("LOGIN_FAILED", "아이디(이메일) 또는 비밀번호가 올바르지 않습니다.");
         }
         String token = jwtProvider.createToken(user.getId(), user.getRole());
         return new LoginResponse(token, new UserSummary(user.getId(), user.getName(), user.getRole()));
@@ -127,6 +141,7 @@ public class AuthService {
 
     private SocialLoginResponse response(UserEntity user, boolean isNew) {
         String token = jwtProvider.createToken(user.getId(), user.getRole());
-        return new SocialLoginResponse(token, new UserSummary(user.getId(), user.getName(), user.getRole()), isNew);
+        return new SocialLoginResponse(token, new UserSummary(user.getId(), user.getName(), user.getRole()),
+                isNew, user.needsProfileSetup());
     }
 }

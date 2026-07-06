@@ -9,6 +9,8 @@ import '../data/social_auth.dart';
 import '../data/social_auth_mobile.dart';
 import '../state/auth_store.dart';
 import 'main_shell.dart';
+import 'profile_setup_page.dart';
+import 'signup_page.dart';
 
 /// S1. 로그인 / 회원가입 화면 (02_화면_정의서 S1)
 /// - 이메일·비밀번호 로그인 / 회원가입.
@@ -29,11 +31,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
-  final TextEditingController _name = TextEditingController();
-  final TextEditingController _phone = TextEditingController();
   final AuthApi _authApi = AuthApi();
 
-  bool _isSignup = false;
   bool _loading = false;
   String? _error;
 
@@ -81,8 +80,6 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _email.dispose();
     _password.dispose();
-    _name.dispose();
-    _phone.dispose();
     super.dispose();
   }
 
@@ -92,14 +89,6 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
     try {
-      if (_isSignup) {
-        await _authApi.signup(
-          email: _email.text.trim(),
-          password: _password.text,
-          name: _name.text.trim(),
-          phone: _phone.text.trim(),
-        );
-      }
       final result = await _authApi.login(email: _email.text.trim(), password: _password.text);
       _applyLogin(result);
     } on ApiException catch (e) {
@@ -111,6 +100,15 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  /// 회원가입 페이지로 이동. 가입+로그인까지 마치고 돌아오면 홈으로 진입.
+  Future<void> _openSignup() async {
+    final done = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const SignupPage()),
+    );
+    if (!mounted || done != true) return;
+    _goAfterLogin();
   }
 
   /// 소셜 로그인.
@@ -147,9 +145,20 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _applyLogin(AuthResult result) {
+  Future<void> _applyLogin(AuthResult result) async {
     if (!mounted) return;
     AuthStore.instance.setSession(result.token, result.user);
+    // 소셜 첫 로그인(또는 온보딩 미완료): 닉네임 → 주소 설정을 먼저 진행한다.
+    if (result.needsProfile) {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(builder: (_) => const ProfileSetupPage()),
+      );
+      if (!mounted) return;
+    }
+    _goAfterLogin();
+  }
+
+  void _goAfterLogin() {
     if (widget.isGate) {
       // 진입 관문: 로그인 성공 → 홈(MainShell)으로 교체 이동
       Navigator.of(context).pushReplacement(
@@ -170,7 +179,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isSignup ? '회원가입' : '로그인')),
+      appBar: AppBar(title: const Text('로그인')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -192,8 +201,8 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 20),
           TextField(
             controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: '이메일', border: OutlineInputBorder()),
+            decoration:
+                const InputDecoration(labelText: '아이디 또는 이메일', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -201,19 +210,6 @@ class _LoginPageState extends State<LoginPage> {
             obscureText: true,
             decoration: const InputDecoration(labelText: '비밀번호 (8자 이상)', border: OutlineInputBorder()),
           ),
-          if (_isSignup) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _name,
-              decoration: const InputDecoration(labelText: '이름', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: '전화번호', border: OutlineInputBorder()),
-            ),
-          ],
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: TextStyle(color: Colors.red[700])),
@@ -226,16 +222,11 @@ class _LoginPageState extends State<LoginPage> {
                 ? const SizedBox(
                     width: 22, height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(_isSignup ? '회원가입하고 시작' : '로그인'),
+                : const Text('로그인'),
           ),
           TextButton(
-            onPressed: _loading
-                ? null
-                : () => setState(() {
-                      _isSignup = !_isSignup;
-                      _error = null;
-                    }),
-            child: Text(_isSignup ? '이미 계정이 있어요 · 로그인' : '계정이 없어요 · 회원가입'),
+            onPressed: _loading ? null : _openSignup,
+            child: const Text('계정이 없어요 · 회원가입'),
           ),
           const SizedBox(height: 8),
           const Row(

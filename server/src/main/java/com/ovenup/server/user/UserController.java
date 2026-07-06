@@ -48,8 +48,9 @@ public class UserController {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다."));
         return ApiResponse.ok(new MyProfile(
-                user.getId(), user.getEmail(), user.getName(),
-                user.getPhone(), user.getRole(), user.getPointBalance(), user.isNotifyEnabled()));
+                user.getId(), user.getEmail(), user.getLoginId(), user.getName(), user.getNickname(),
+                user.getPhone(), user.getAddress(), user.getRole(),
+                user.getPointBalance(), user.isNotifyEnabled()));
     }
 
     @PatchMapping("/api/users/me")
