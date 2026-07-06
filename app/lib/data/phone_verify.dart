@@ -59,7 +59,8 @@ class PhoneVerify {
       } on FirebaseAuthException catch (e) {
         onError(_message(e));
       } catch (e) {
-        onError('인증 문자를 보내지 못했어요.');
+        // 원인 파악을 위해 상세를 함께 보여준다
+        onError('인증 문자를 보내지 못했어요. ($e)');
       }
       return;
     }

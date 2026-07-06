@@ -31,6 +31,7 @@ class AuthApi {
     required String password,
     required String phone,
     required String address,
+    String? identityVerificationId,
   }) async {
     final res = await _client.post(
       Uri.parse('$kApiBaseUrl/api/auth/signup'),
@@ -41,6 +42,7 @@ class AuthApi {
         'password': password,
         'phone': phone,
         'address': address,
+        'identityVerificationId': ?identityVerificationId,
       }),
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
@@ -99,6 +101,24 @@ class AuthApi {
       data['accessToken'] as String,
       AuthUser.fromJson(data['user'] as Map<String, dynamic>),
       needsProfile: (data['needsProfile'] as bool?) ?? false,
+    );
+  }
+
+  /// 본인인증 결과 미리보기: 인증창 완료 후 이름·전화번호를 가져온다 (서버가 PortOne에 검증)
+  Future<({String name, String phone})> checkIdentity(String identityVerificationId) async {
+    final res = await _client.post(
+      Uri.parse('$kApiBaseUrl/api/auth/identity/preview'),
+      headers: _jsonHeader,
+      body: jsonEncode({'identityVerificationId': identityVerificationId}),
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '본인인증 확인에 실패했어요'));
+    }
+    final data = body['data'] as Map<String, dynamic>;
+    return (
+      name: (data['name'] as String?) ?? '',
+      phone: (data['phone'] as String?) ?? '',
     );
   }
 

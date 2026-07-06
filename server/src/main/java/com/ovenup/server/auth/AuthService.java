@@ -38,16 +38,27 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final SocialProfileVerifier socialVerifier;
     private final SocialAuthCodeExchanger socialCodeExchanger;
+    private final IdentityVerifier identityVerifier;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthService(UserRepository userRepository, SocialAccountRepository socialAccountRepository,
                        JwtProvider jwtProvider, SocialProfileVerifier socialVerifier,
-                       SocialAuthCodeExchanger socialCodeExchanger) {
+                       SocialAuthCodeExchanger socialCodeExchanger, IdentityVerifier identityVerifier) {
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.jwtProvider = jwtProvider;
         this.socialVerifier = socialVerifier;
         this.socialCodeExchanger = socialCodeExchanger;
+        this.identityVerifier = identityVerifier;
+    }
+
+    /** 본인인증 결과 미리보기 (이름·전화번호). 실패 시 400. */
+    public java.util.Map<String, Object> identityPreview(String identityVerificationId) {
+        IdentityVerifier.Result r = identityVerifier.verify(identityVerificationId);
+        if (!r.verified()) {
+            throw ApiException.badRequest("IDENTITY_NOT_VERIFIED", r.message());
+        }
+        return java.util.Map.of("name", r.name(), "phone", r.phone());
     }
 
     @Transactional
@@ -72,6 +83,20 @@ public class AuthService {
         // 표시 이름: 이름이 없으면 아이디를 쓴다.
         String name = (request.name() == null || request.name().isBlank()) ? loginId : request.name().trim();
         String phone = request.phone() == null ? "" : request.phone().trim();
+        // 휴대폰 본인인증(PASS식)을 거쳤으면 서버가 직접 재검증하고,
+        // 통신사가 확인한 이름·전화번호를 신뢰해 사용한다.
+        if (request.identityVerificationId() != null && !request.identityVerificationId().isBlank()) {
+            IdentityVerifier.Result r = identityVerifier.verify(request.identityVerificationId());
+            if (!r.verified()) {
+                throw ApiException.badRequest("IDENTITY_NOT_VERIFIED", r.message());
+            }
+            if (!r.phone().isBlank()) {
+                phone = r.phone();
+            }
+            if (!r.name().isBlank()) {
+                name = r.name();
+            }
+        }
         UserEntity user = new UserEntity(request.email().trim(), hashed, name, phone);
         user.setSignupInfo(loginId, request.address() == null ? null : request.address().trim());
         UserEntity saved = userRepository.save(user);
