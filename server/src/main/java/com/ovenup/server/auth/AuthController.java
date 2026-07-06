@@ -48,4 +48,13 @@ public class AuthController {
                                                    @RequestBody SocialLoginRequest request) {
         return ApiResponse.ok(authService.socialLogin(provider, request));
     }
+
+    /**
+     * 휴대폰 본인인증 결과 미리보기 — 인증창 완료 직후 이름·전화번호를 확인해
+     * 회원가입 화면에 자동 입력한다. (가입 시 서버가 같은 ID로 다시 검증)
+     */
+    @PostMapping("/api/auth/identity/preview")
+    public ApiResponse<Map<String, Object>> identityPreview(@RequestBody Map<String, String> body) {
+        return ApiResponse.ok(authService.identityPreview(body.get("identityVerificationId")));
+    }
 }

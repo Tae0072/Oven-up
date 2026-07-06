@@ -18,6 +18,15 @@ const String _channelKeyTosspay = String.fromEnvironment('PORTONE_CHANNEL_KEY_TO
 /// 실제 결제창(PortOne)을 띄울 수 있는 상태인가?
 bool get isRealPaymentEnabled => kPortoneStoreId.isNotEmpty && kPortoneChannelKey.isNotEmpty;
 
+/// 휴대폰 본인인증(PASS식, KG이니시스 통합인증) 채널 키.
+/// 예) --dart-define=PORTONE_CHANNEL_KEY_IDENTITY=channel-key-...
+const String kPortoneChannelKeyIdentity =
+    String.fromEnvironment('PORTONE_CHANNEL_KEY_IDENTITY');
+
+/// 휴대폰 본인인증 창을 띄울 수 있는 상태인가?
+bool get isIdentityVerifyEnabled =>
+    kPortoneStoreId.isNotEmpty && kPortoneChannelKeyIdentity.isNotEmpty;
+
 /// 앱 결제수단 코드 → 사용할 채널 키. (수단별 키가 없으면 기본 채널)
 String portoneChannelKey(String methodCode) {
   final specific = switch (methodCode) {
