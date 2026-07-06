@@ -43,6 +43,8 @@ dependencies:
   flutter_naver_login: ^2.1.1
   # 모바일 결제창 — PortOne 공식 SDK (웹은 index.html의 JS SDK 사용)
   portone_flutter: ^1.0.1
+  # 앱이 화면에 떠 있을 때(포그라운드) 푸시를 직접 알림바에 표시
+  flutter_local_notifications: ^22.0.1
   # 푸시 알림(FCM) — 모바일 전용 (android/app/google-services.json 필요, 커밋 금지)
   firebase_core: ^4.11.0
   firebase_messaging: ^16.4.1

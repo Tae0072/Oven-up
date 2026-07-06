@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/api_exception.dart';
+import '../data/auth_api.dart';
 import '../data/menu_repository.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
@@ -45,9 +47,23 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     Future<void>.delayed(const Duration(milliseconds: 2100), _goNext);
   }
 
-  void _goNext() {
+  Future<void> _goNext() async {
     if (!mounted) return;
-    final Widget next = AuthStore.instance.isLoggedIn
+    bool loggedIn = AuthStore.instance.isLoggedIn;
+    if (loggedIn) {
+      // 저장된 로그인 토큰이 아직 유효한지 서버에 확인한다.
+      // 만료됐으면(서버 재시작·7일 경과 등) 조용히 로그아웃하고 로그인 화면으로 보낸다.
+      try {
+        await AuthApi().fetchProfile(AuthStore.instance.token!);
+      } on ApiException {
+        AuthStore.instance.logout();
+        loggedIn = false;
+      } catch (_) {
+        // 서버에 연결 못 한 경우(꺼짐 등)는 세션을 유지하고 홈으로 — 화면에서 재시도
+      }
+    }
+    if (!mounted) return;
+    final Widget next = loggedIn
         ? MainShell(repository: widget.repository)
         : LoginPage(repository: widget.repository, isGate: true);
     Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => next));
