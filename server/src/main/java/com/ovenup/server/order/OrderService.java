@@ -190,6 +190,16 @@ public class OrderService {
                 : "결제가 완료되어 주문이 접수됐어요.";
         notificationService.notifyUser(order.getUserId(), "주문 " + order.getOrderNo(),
                 paidBody, "ORDER_PAID", order.getId());
+        // 사장님(관리자)에게도 새 주문 알림
+        String fulfillLabel = switch (order.getFulfillmentType()) {
+            case "DINE_IN" -> "매장";
+            case "TAKEOUT" -> "포장";
+            case "DELIVERY" -> "배달";
+            default -> order.getFulfillmentType();
+        };
+        notificationService.notifyAdmins("새 주문 " + order.getOrderNo(),
+                String.format("%s 주문이 들어왔어요. (%,d원)", fulfillLabel, order.getTotalPrice()),
+                "NEW_ORDER", order.getId());
         return new PaymentDone(order.getId(), order.getOrderNo(), order.getStatus(), order.getPaymentMethod());
     }
 

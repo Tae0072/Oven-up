@@ -55,6 +55,9 @@ public class OrderEntity {
 
     private LocalDateTime createdAt;
 
+    /** 예약 주문 리마인드 알림을 보냈는지 (중복 발송 방지) */
+    private boolean reminderSent;
+
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
     private List<OrderItemEntity> items = new ArrayList<>();
@@ -76,6 +79,15 @@ public class OrderEntity {
         this.status = status;
         this.items = items;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public boolean isReminderSent() {
+        return reminderSent;
+    }
+
+    /** 예약 리마인드 발송 완료 표시 */
+    public void markReminderSent() {
+        this.reminderSent = true;
     }
 
     /** 저장 후 id를 이용해 주문번호를 붙인다. */

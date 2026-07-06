@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'notification_api.dart';
 
@@ -16,6 +17,14 @@ class PushService {
 
   static bool _ready = false;
 
+  static final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'ovenup_default',
+    '오븐업 알림',
+    description: '주문·예약 알림',
+    importance: Importance.high,
+  );
+
   /// 앱 시작 시 1회 호출. Firebase 초기화 (실패해도 앱은 정상 동작).
   static Future<void> init() async {
     if (kIsWeb) return; // 웹 푸시는 추후 별도 설정(VAPID/서비스워커) 필요
@@ -25,6 +34,39 @@ class PushService {
     } catch (e) {
       // google-services.json 미설정 등 — 푸시 없이 동작
       debugPrint('[PUSH] Firebase 초기화 안 됨(푸시 비활성): $e');
+      return;
+    }
+    try {
+      // 안드로이드는 앱이 화면에 떠 있으면(포그라운드) 푸시를 자동 표시하지 않는다.
+      // → 포그라운드 수신 시 로컬 알림으로 직접 표시한다.
+      await _local.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        ),
+      );
+      await _local
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(_channel);
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final n = message.notification;
+        if (n == null) return;
+        _local.show(
+          id: n.hashCode,
+          title: n.title,
+          body: n.body,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _channel.id,
+              _channel.name,
+              channelDescription: _channel.description,
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+          ),
+        );
+      });
+    } catch (e) {
+      debugPrint('[PUSH] 포그라운드 알림 설정 실패(백그라운드 푸시는 정상): $e');
     }
   }
 

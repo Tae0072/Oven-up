@@ -59,6 +59,13 @@ public class NotificationService {
         pushSender.send(userId, title, body);
     }
 
+    /** 관리자(사장님) 전원에게 알림 — 새 주문 접수 등 가게 운영 이벤트용. */
+    @Transactional
+    public void notifyAdmins(String title, String body, String type, Long relatedOrderId) {
+        userRepository.findByRole("ADMIN")
+                .forEach(admin -> notifyUser(admin.getId(), title, body, type, relatedOrderId));
+    }
+
     @Transactional(readOnly = true)
     public List<NotificationView> myList(Long userId) {
         return notificationRepository.findByUserIdOrderByIdDesc(userId).stream()
