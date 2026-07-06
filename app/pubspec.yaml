@@ -48,8 +48,6 @@ dependencies:
   # 푸시 알림(FCM) — 모바일 전용 (android/app/google-services.json 필요, 커밋 금지)
   firebase_core: ^4.11.0
   firebase_messaging: ^16.4.1
-  # 휴대폰 번호 인증(SMS) — 회원가입에서 사용 (웹·모바일 공통)
-  firebase_auth: ^6.0.0
   # 주소 검색(다음 우편번호) 웹뷰 — 모바일 전용 (portone_flutter와 같은 웹뷰 사용)
   flutter_inappwebview: 6.2.0-beta.3
 
