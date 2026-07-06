@@ -47,6 +47,9 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // R8 missing class(okhttp/conscrypt) 이슈로 코드 축소 비활성 (매장 태블릿용이라 용량 무관)
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
