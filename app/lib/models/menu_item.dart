@@ -22,6 +22,9 @@ class MenuItem {
   /// 사진이 아직 없어 임시로 쓰는 대표 이모지
   final String emoji;
 
+  /// 메뉴 사진 주소 (없으면 빈 문자열 → 이모지 표시)
+  final String imageUrl;
+
   /// 대표(BEST) 메뉴 여부
   final bool isBest;
 
@@ -43,6 +46,7 @@ class MenuItem {
     required this.bread,
     required this.price,
     required this.emoji,
+    this.imageUrl = '',
     this.description = '',
     this.isBest = false,
     this.status = '판매중',
@@ -62,6 +66,7 @@ class MenuItem {
         bread: (json['bread'] as String?) ?? '',
         price: (json['price'] as num).toInt(),
         emoji: (json['emoji'] as String?) ?? '🥪',
+        imageUrl: (json['imageUrl'] as String?) ?? '',
         isBest: (json['isBest'] as bool?) ?? false,
         status: (json['status'] as String?) ?? '판매중',
         ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0,
