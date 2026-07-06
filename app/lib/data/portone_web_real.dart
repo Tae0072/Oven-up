@@ -18,6 +18,7 @@ Future<String> requestPaymentWeb({
   required int amount,
   required String payMethod,
   required String channelKey,
+  required String customerName,
 }) async {
   final options = <String, Object?>{
     'storeId': kPortoneStoreId,
@@ -27,6 +28,8 @@ Future<String> requestPaymentWeb({
     'totalAmount': amount,
     'currency': 'CURRENCY_KRW',
     'payMethod': payMethod,
+    // 일부 결제사(KG이니시스 등)는 구매자 이름이 필수
+    'customer': {'fullName': customerName},
   }.jsify()! as JSObject;
 
   final JSObject? result = await _requestPayment(options).toDart;

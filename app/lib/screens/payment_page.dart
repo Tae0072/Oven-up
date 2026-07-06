@@ -60,6 +60,9 @@ class _PaymentPageState extends State<PaymentPage> {
         // 실제 결제: PortOne 결제창 → 성공 시 paymentId 를 서버로 보내 검증한다.
         final paymentId = 'ovenup-${widget.orderId}-${DateTime.now().millisecondsSinceEpoch}';
         final orderName = '오븐업 주문 ${widget.orderNo}';
+        // 일부 결제사(카드 등)는 구매자 이름이 필수
+        final customerName = AuthStore.instance.user?.name ?? '';
+        final buyerName = customerName.isEmpty ? '오븐업 손님' : customerName;
         if (kIsWeb) {
           paymentRef = await portone_web.requestPaymentWeb(
             paymentId: paymentId,
@@ -67,9 +70,10 @@ class _PaymentPageState extends State<PaymentPage> {
             amount: widget.amount,
             payMethod: portonePayMethod(_method),
             channelKey: portoneChannelKey(_method),
+            customerName: buyerName,
           );
         } else {
-          paymentRef = await _payWithMobileSdk(paymentId, orderName);
+          paymentRef = await _payWithMobileSdk(paymentId, orderName, buyerName);
           if (paymentRef == null) {
             // 사용자가 결제창을 닫거나 실패 → 결제 화면에 그대로 남는다.
             if (mounted) setState(() => _paying = false);
@@ -99,7 +103,7 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   /// 모바일: PortOne 결제창 화면을 띄우고, 성공하면 paymentId를 돌려받는다(취소 시 null).
-  Future<String?> _payWithMobileSdk(String paymentId, String orderName) {
+  Future<String?> _payWithMobileSdk(String paymentId, String orderName, String buyerName) {
     return Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         builder: (routeCtx) => portone_mobile.buildPortonePaymentView(
@@ -108,6 +112,7 @@ class _PaymentPageState extends State<PaymentPage> {
           amount: widget.amount,
           payMethod: portonePayMethod(_method),
           channelKey: portoneChannelKey(_method),
+          customerName: buyerName,
           onSuccess: (id) => Navigator.of(routeCtx).pop(id),
           onFail: (message) {
             Navigator.of(routeCtx).pop();

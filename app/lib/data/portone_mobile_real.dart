@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:portone_flutter/v2/model/entity/currency.dart';
+import 'package:portone_flutter/v2/model/entity/customer.dart';
 import 'package:portone_flutter/v2/model/entity/payment_pay_method.dart';
 import 'package:portone_flutter/v2/model/request/payment_request.dart';
 import 'package:portone_flutter/v2/model/response/payment_response.dart';
@@ -17,6 +18,7 @@ Widget buildPortonePaymentView({
   required int amount,
   required String payMethod,
   required String channelKey,
+  required String customerName,
   required void Function(String paymentId) onSuccess,
   required void Function(String message) onFail,
 }) {
@@ -32,6 +34,8 @@ Widget buildPortonePaymentView({
       currency: Currency.KRW,
       paymentId: paymentId,
       appScheme: 'ovenup',
+      // 일부 결제사(KG이니시스 등)는 구매자 이름이 필수
+      customer: Customer(fullName: customerName),
     ),
     callback: (PaymentResponse response) {
       final code = response.code;
