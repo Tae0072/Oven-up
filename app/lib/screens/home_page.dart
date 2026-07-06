@@ -93,36 +93,41 @@ class HomePage extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
             child: Text('무엇을 도와드릴까요?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
-          // 바로가기 버튼 4개
+          // 바로가기 버튼 4개 — 가로 한 줄
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.5,
+            child: Row(
               children: [
-                _ShortcutCard(
-                  icon: Icons.lunch_dining,
-                  label: '메뉴 주문',
-                  onTap: onGoToMenu,
+                Expanded(
+                  child: _ShortcutCard(
+                    icon: Icons.lunch_dining,
+                    label: '메뉴 주문',
+                    onTap: onGoToMenu,
+                  ),
                 ),
-                _ShortcutCard(
-                  icon: Icons.schedule,
-                  label: '예약 주문',
-                  onTap: () => _openReservation(context),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ShortcutCard(
+                    icon: Icons.schedule,
+                    label: '예약 주문',
+                    onTap: () => _openReservation(context),
+                  ),
                 ),
-                _ShortcutCard(
-                  icon: Icons.groups,
-                  label: '단체 주문',
-                  onTap: () => _openGroupOrder(context),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ShortcutCard(
+                    icon: Icons.groups,
+                    label: '단체 주문',
+                    onTap: () => _openGroupOrder(context),
+                  ),
                 ),
-                _ShortcutCard(
-                  icon: Icons.forum,
-                  label: '고객의 소리',
-                  onTap: () => _openInquiry(context),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ShortcutCard(
+                    icon: Icons.forum,
+                    label: '고객의 소리',
+                    onTap: () => _openInquiry(context),
+                  ),
                 ),
               ],
             ),
@@ -160,13 +165,19 @@ class _ShortcutCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 34, color: AppColors.primary),
-              const SizedBox(height: 8),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Icon(icon, size: 28, color: AppColors.primary),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label,
+                    maxLines: 1,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
             ],
           ),
         ),
