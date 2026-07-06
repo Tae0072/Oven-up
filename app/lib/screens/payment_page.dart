@@ -9,6 +9,7 @@ import '../data/portone_mobile_stub.dart'
 import '../data/portone_web_stub.dart'
     if (dart.library.js_interop) '../data/portone_web_real.dart' as portone_web;
 import '../state/auth_store.dart';
+import '../state/cart.dart';
 import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'order_complete_page.dart';
@@ -21,7 +22,15 @@ class PaymentPage extends StatefulWidget {
   final String orderNo;
   final int amount;
 
-  const PaymentPage({super.key, required this.orderId, required this.orderNo, required this.amount});
+  /// true면 화면에 들어오자마자 결제창을 자동으로 연다 (주문서 → 결제하기 직행).
+  final bool autoStart;
+
+  const PaymentPage(
+      {super.key,
+      required this.orderId,
+      required this.orderNo,
+      required this.amount,
+      this.autoStart = false});
 
   @override
   State<PaymentPage> createState() => _PaymentPageState();
@@ -31,6 +40,17 @@ class _PaymentPageState extends State<PaymentPage> {
   final OrderApi _orderApi = OrderApi();
   static const String _method = 'CARD'; // 이니시스 채널 고정
   bool _paying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 주문서에서 넘어온 경우 결제창을 바로 연다.
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_paying) _pay();
+      });
+    }
+  }
 
   Future<void> _pay() async {
     final token = AuthStore.instance.token;
@@ -69,6 +89,8 @@ class _PaymentPageState extends State<PaymentPage> {
       // mock 모드면 paymentRef 없이 바로 서버 호출(서버가 mock 검증으로 완료 처리)
       final done = await _orderApi.payOrder(
           token: token, orderId: widget.orderId, method: _method, paymentRef: paymentRef);
+      // 결제가 진짜 끝났을 때만 장바구니를 비운다.
+      Cart.instance.clear();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(

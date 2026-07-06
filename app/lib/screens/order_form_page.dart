@@ -203,13 +203,15 @@ class _OrderFormPageState extends State<OrderFormPage> {
         usePoints: _pointsUsed,
       );
       if (!mounted) return;
-      Cart.instance.clear();
+      // 장바구니는 여기서 비우지 않는다 — 결제가 실제로 성공했을 때(PaymentPage)만 비운다.
+      // 결제 전에 뒤로 나오면 담아둔 메뉴가 그대로 남아 있어야 한다.
       await navigator.push(
         MaterialPageRoute<void>(
           builder: (_) => PaymentPage(
             orderId: created.orderId,
             orderNo: created.orderNo,
             amount: created.totalPrice,
+            autoStart: true, // 주문서에서 결제하기를 눌렀으면 바로 결제창을 연다
           ),
         ),
       );
