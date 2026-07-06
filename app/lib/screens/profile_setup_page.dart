@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/address_search.dart';
 import '../data/api_exception.dart';
 import '../data/auth_api.dart';
 import '../models/auth_user.dart';
@@ -19,6 +20,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final AuthApi _authApi = AuthApi();
   final TextEditingController _nickname = TextEditingController();
   final TextEditingController _address = TextEditingController();
+  final TextEditingController _addressDetail = TextEditingController();
+
+  /// 주소 검색창 열기
+  Future<void> _searchAddress() async {
+    final picked = await pickAddress(context);
+    if (picked != null && picked.isNotEmpty && mounted) {
+      setState(() => _address.text = picked);
+    }
+  }
 
   int _step = 0; // 0=닉네임, 1=주소
   bool _loading = false;
@@ -28,6 +38,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   void dispose() {
     _nickname.dispose();
     _address.dispose();
+    _addressDetail.dispose();
     super.dispose();
   }
 
@@ -60,11 +71,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 
   Future<void> _saveAddress() async {
-    final address = _address.text.trim();
-    if (address.isEmpty) {
-      setState(() => _error = '주소를 입력해 주세요.');
+    final base = _address.text.trim();
+    if (base.isEmpty) {
+      setState(() => _error = '주소 검색으로 주소를 선택해 주세요.');
       return;
     }
+    final detail = _addressDetail.text.trim();
+    final address = detail.isEmpty ? base : '$base, $detail';
     setState(() {
       _loading = true;
       _error = null;
@@ -115,15 +128,27 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 decoration: const InputDecoration(
                     labelText: '닉네임', hintText: '예: 빵순이', border: OutlineInputBorder()),
               )
-            else
+            else ...[
               TextField(
                 controller: _address,
-                autofocus: true,
+                readOnly: true,
+                onTap: _searchAddress,
                 decoration: const InputDecoration(
-                    labelText: '주소',
-                    hintText: '예: 명지에코펠리스 305호',
+                  labelText: '주소',
+                  hintText: '눌러서 주소 검색',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _addressDetail,
+                decoration: const InputDecoration(
+                    labelText: '상세주소 (동/호수 등)',
+                    hintText: '예: 305호',
                     border: OutlineInputBorder()),
               ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!, style: TextStyle(color: Colors.red[700])),

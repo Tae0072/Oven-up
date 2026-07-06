@@ -34,6 +34,19 @@
 
   <!-- PortOne(포트원) V2 결제 브라우저 SDK -->
   <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+
+  <!-- 다음(카카오) 우편번호 서비스 — 주소 검색창 (무료, 키 불필요) -->
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script>
+    // Flutter에서 호출: 주소 검색 팝업을 열고, 선택한 도로명(또는 지번) 주소를 콜백으로 돌려준다.
+    function openDaumPostcode(cb) {
+      new daum.Postcode({
+        oncomplete: function (data) {
+          cb(data.roadAddress || data.jibunAddress || '');
+        }
+      }).open();
+    }
+  </script>
 </head>
 <body>
   <!--
