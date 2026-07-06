@@ -62,6 +62,20 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
       await Navigator.of(context).push(MaterialPageRoute<bool>(builder: (_) => const LoginPage()));
       if (!mounted || !AuthStore.instance.isLoggedIn) return;
     }
+    // 구매한 메뉴인지(그리고 아직 리뷰를 안 썼는지) 먼저 확인
+    try {
+      final e = await _reviewApi.checkEligibility(
+          token: AuthStore.instance.token!, menuId: widget.item.id);
+      if (!mounted) return;
+      if (!e.canWrite) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+              content: Text(e.reason.isEmpty ? '지금은 리뷰를 쓸 수 없어요.' : e.reason)));
+        return;
+      }
+    } catch (_) {/* 확인 실패 시엔 일단 진행 — 서버가 최종 검증함 */}
+    if (!mounted) return;
     final submitted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,

@@ -70,6 +70,20 @@ public class ReviewService {
         return false;
     }
 
+    /** 이 회원이 이 메뉴에 리뷰를 쓸 수 있는지 (구매 이력 + 중복 여부). */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> eligibility(Long userId, long menuId) {
+        boolean already = reviewRepository.existsByUserIdAndMenuId(userId, menuId);
+        boolean purchased = hasPurchased(userId, menuId);
+        String reason = "";
+        if (already) {
+            reason = "이미 이 메뉴에 리뷰를 남겼어요.";
+        } else if (!purchased) {
+            reason = "구매한 메뉴만 리뷰를 쓸 수 있어요.";
+        }
+        return java.util.Map.of("canWrite", purchased && !already, "reason", reason);
+    }
+
     @Transactional(readOnly = true)
     public MenuReviews listForMenu(long menuId) {
         List<ReviewEntity> reviews = reviewRepository.findByMenuIdOrderByIdDesc(menuId);

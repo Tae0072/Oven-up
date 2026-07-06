@@ -22,6 +22,26 @@ class ReviewApi {
     return MenuReviews.fromJson(body['data'] as Map<String, dynamic>);
   }
 
+  /// 리뷰 작성 가능 여부 (구매 이력·중복 확인). canWrite=false면 reason에 안내문.
+  Future<({bool canWrite, String reason})> checkEligibility({
+    required String token,
+    required int menuId,
+  }) async {
+    final res = await _client.get(
+      Uri.parse('$kApiBaseUrl/api/menus/$menuId/reviews/eligibility'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+    if (res.statusCode != 200) {
+      throw ApiException(_errorMessage(body, '리뷰 작성 가능 여부를 확인하지 못했어요'));
+    }
+    final data = body['data'] as Map<String, dynamic>;
+    return (
+      canWrite: (data['canWrite'] as bool?) ?? false,
+      reason: (data['reason'] as String?) ?? '',
+    );
+  }
+
   Future<void> createReview({
     required String token,
     required int menuId,

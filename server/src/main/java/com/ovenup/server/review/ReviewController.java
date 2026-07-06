@@ -36,6 +36,17 @@ public class ReviewController {
         return ApiResponse.ok(reviewService.listForMenu(menuId));
     }
 
+    /** 리뷰 작성 가능 여부 (로그인 필요) — 앱이 작성 버튼 누를 때 미리 확인 */
+    @GetMapping("/api/menus/{menuId}/reviews/eligibility")
+    public ApiResponse<java.util.Map<String, Object>> eligibility(HttpServletRequest request,
+                                                                  @PathVariable long menuId) {
+        Object attr = request.getAttribute(AuthTokenFilter.USER_ID_ATTR);
+        if (attr == null) {
+            throw ApiException.unauthorized("UNAUTHORIZED", "로그인이 필요합니다.");
+        }
+        return ApiResponse.ok(reviewService.eligibility((Long) attr, menuId));
+    }
+
     @PostMapping("/api/menus/{menuId}/reviews")
     public ResponseEntity<ApiResponse<ReviewView>> create(HttpServletRequest request, @PathVariable long menuId,
                                                           @RequestBody CreateReviewRequest body) {
