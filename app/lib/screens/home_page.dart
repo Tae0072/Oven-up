@@ -36,8 +36,17 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: false,
-        titleSpacing: 8,
+        // 좌측 상단: 로고 / 상단 중앙: 주소 선택
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stack) => const Icon(Icons.bakery_dining),
+          ),
+        ),
+        centerTitle: true,
         title: const AddressTitle(),
         actions: const [NotificationBell()],
       ),

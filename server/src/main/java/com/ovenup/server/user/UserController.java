@@ -60,6 +60,31 @@ public class UserController {
         return ApiResponse.ok(userService.updateProfile(userId, body));
     }
 
+    // ── 주소 목록 (배민식 주소 관리) ──
+
+    @org.springframework.web.bind.annotation.GetMapping("/api/users/me/addresses")
+    public ApiResponse<java.util.List<UserService.AddressView>> listAddresses(HttpServletRequest request) {
+        return ApiResponse.ok(userService.listAddresses(requireUserId(request)));
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/api/users/me/addresses")
+    public ApiResponse<java.util.List<UserService.AddressView>> addAddress(
+            HttpServletRequest request, @RequestBody java.util.Map<String, String> body) {
+        return ApiResponse.ok(userService.addAddress(requireUserId(request), body.get("address")));
+    }
+
+    @PatchMapping("/api/users/me/addresses/{addressId}/select")
+    public ApiResponse<java.util.List<UserService.AddressView>> selectAddress(
+            HttpServletRequest request, @org.springframework.web.bind.annotation.PathVariable long addressId) {
+        return ApiResponse.ok(userService.selectAddress(requireUserId(request), addressId));
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/api/users/me/addresses/{addressId}")
+    public ApiResponse<java.util.List<UserService.AddressView>> deleteAddress(
+            HttpServletRequest request, @org.springframework.web.bind.annotation.PathVariable long addressId) {
+        return ApiResponse.ok(userService.deleteAddress(requireUserId(request), addressId));
+    }
+
     @PatchMapping("/api/users/me/password")
     public ApiResponse<Void> changePassword(HttpServletRequest request,
                                             @RequestBody ChangePasswordRequest body) {

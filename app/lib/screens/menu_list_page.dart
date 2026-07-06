@@ -91,8 +91,13 @@ class _MenuListPageState extends State<MenuListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: false,
-        titleSpacing: 8,
+        // 좌측 상단: 화면 이름 / 상단 중앙: 주소 선택
+        leadingWidth: 72,
+        leading: const Center(
+          child: Text('메뉴',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        centerTitle: true,
         title: const AddressTitle(),
         actions: [
           Padding(
