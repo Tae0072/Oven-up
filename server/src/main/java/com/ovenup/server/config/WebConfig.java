@@ -5,9 +5,9 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * 개발용 CORS 설정.
- * Flutter 웹(다른 포트)에서 이 서버의 /api/** 를 호출할 수 있게 허용한다.
- * ⚠️ 지금은 개발 편의를 위해 모든 출처 허용. 배포 시에는 실제 도메인만 허용하도록 좁힐 것.
+ * CORS 설정.
+ * 우리 서비스 출처(운영 웹 + 로컬 개발)에서만 /api/** 호출을 허용한다.
+ * 앱(안드로이드/iOS)은 브라우저가 아니라 CORS 제한을 받지 않는다.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -15,7 +15,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("*")
+                .allowedOriginPatterns(
+                        "https://ven-up.web.app", // 운영 웹 (Firebase Hosting)
+                        "https://ven-up.firebaseapp.com", // Firebase 보조 도메인
+                        "http://localhost:[*]", // 로컬 개발 (flutter run -d chrome 등)
+                        "http://127.0.0.1:[*]")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
     }
 }
