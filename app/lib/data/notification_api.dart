@@ -14,6 +14,19 @@ class NotificationApi {
 
   Map<String, String> _auth(String token) => {'Authorization': 'Bearer $token'};
 
+  /// 기기 토큰 등록 (푸시용). 로그인 후 FCM 토큰을 서버에 알려준다.
+  Future<void> registerDeviceToken({required String token, required String fcmToken}) async {
+    final res = await _client.post(
+      Uri.parse('$kApiBaseUrl/api/notifications/device-token'),
+      headers: {..._auth(token), 'Content-Type': 'application/json'},
+      body: jsonEncode({'token': fcmToken}),
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      throw ApiException(_errorMessage(body, '기기 등록에 실패했어요'));
+    }
+  }
+
   /// 내 알림 목록
   Future<List<AppNotification>> fetchList(String token) async {
     final res = await _client.get(Uri.parse('$kApiBaseUrl/api/notifications'), headers: _auth(token));

@@ -24,6 +24,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	// 비밀번호 해시(BCrypt)만 사용 (전체 Spring Security 필터체인은 쓰지 않음)
 	implementation 'org.springframework.security:spring-security-crypto'
+	// FCM(푸시) — 서비스 계정으로 구글 OAuth2 토큰 발급 (FCM HTTP v1 호출용)
+	implementation 'com.google.auth:google-auth-library-oauth2-http:1.30.0'
 	// JWT (로그인 토큰)
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'

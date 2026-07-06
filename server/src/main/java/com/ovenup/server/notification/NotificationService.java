@@ -18,12 +18,31 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final PushSender pushSender;
     private final UserRepository userRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
 
     public NotificationService(NotificationRepository notificationRepository, PushSender pushSender,
-                               UserRepository userRepository) {
+                               UserRepository userRepository, DeviceTokenRepository deviceTokenRepository) {
         this.notificationRepository = notificationRepository;
         this.pushSender = pushSender;
         this.userRepository = userRepository;
+        this.deviceTokenRepository = deviceTokenRepository;
+    }
+
+    /**
+     * 기기 토큰 등록 (가이드 §3-1). 같은 토큰이 이미 있으면 주인만 갱신한다
+     * (한 기기에서 다른 계정으로 다시 로그인한 경우).
+     */
+    @Transactional
+    public void registerDeviceToken(Long userId, String token) {
+        if (token == null || token.isBlank()) {
+            throw ApiException.badRequest("INVALID_INPUT", "기기 토큰이 없습니다.");
+        }
+        deviceTokenRepository.findByToken(token).ifPresentOrElse(existing -> {
+            if (!existing.getUserId().equals(userId)) {
+                existing.reassignTo(userId);
+                deviceTokenRepository.save(existing);
+            }
+        }, () -> deviceTokenRepository.save(new DeviceTokenEntity(userId, token)));
     }
 
     /**

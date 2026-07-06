@@ -4,6 +4,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' show KakaoSd
 
 import 'data/api_menu_repository.dart';
 import 'data/menu_repository.dart';
+import 'data/push_service.dart';
 import 'data/social_auth.dart';
 import 'screens/splash_page.dart';
 import 'state/auth_store.dart';
@@ -18,6 +19,8 @@ Future<void> main() async {
   if (!kIsWeb && kKakaoNativeAppKey.isNotEmpty) {
     KakaoSdk.init(nativeAppKey: kKakaoNativeAppKey);
   }
+  // 모바일: 푸시(FCM) 초기화 — google-services.json 없으면 조용히 건너뜀
+  await PushService.init();
   await AuthStore.instance.load();
   runApp(OvenUpApp());
 }

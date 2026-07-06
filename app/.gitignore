@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase 설정 파일 — API 키가 들어 있어 커밋하지 않음 (D:\ai제작\ 원본을 실행 스크립트가 복사)
+/android/app/google-services.json
