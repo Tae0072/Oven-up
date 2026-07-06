@@ -14,6 +14,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications가 요구 (최신 자바 API를 구형 안드로이드에서 쓰게 해줌)
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -57,4 +59,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // core library desugaring 런타임 (위 compileOptions와 세트)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
