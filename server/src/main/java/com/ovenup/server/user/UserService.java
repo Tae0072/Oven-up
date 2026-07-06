@@ -34,11 +34,27 @@ public class UserService {
 
     @Transactional
     public MyProfile updateProfile(Long userId, UpdateProfileRequest request) {
-        if (request.name() == null || request.name().isBlank()) {
-            throw ApiException.badRequest("INVALID_INPUT", "이름을 입력해 주세요.");
+        boolean hasName = request.name() != null && !request.name().isBlank();
+        boolean hasNickname = request.nickname() != null && !request.nickname().isBlank();
+        boolean hasAddress = request.address() != null && !request.address().isBlank();
+        boolean hasPhone = request.phone() != null;
+        if (!hasName && !hasNickname && !hasAddress && !hasPhone) {
+            throw ApiException.badRequest("INVALID_INPUT", "수정할 내용을 입력해 주세요.");
         }
         UserEntity user = requireUser(userId);
-        user.updateProfile(request.name().trim(), request.phone() == null ? "" : request.phone().trim());
+        // 이름/연락처 수정 (기존 프로필 수정 화면)
+        if (hasName || hasPhone) {
+            user.updateProfile(hasName ? request.name().trim() : null,
+                    hasPhone ? request.phone().trim() : user.getPhone());
+        }
+        // 닉네임 설정 (소셜 온보딩 1단계)
+        if (hasNickname) {
+            user.setNickname(request.nickname().trim());
+        }
+        // 주소 설정 (소셜 온보딩 2단계 / 회원정보 수정)
+        if (hasAddress) {
+            user.setAddress(request.address().trim());
+        }
         userRepository.save(user);
         return toProfile(user);
     }
@@ -62,8 +78,9 @@ public class UserService {
     }
 
     private MyProfile toProfile(UserEntity user) {
-        return new MyProfile(user.getId(), user.getEmail(), user.getName(),
-                user.getPhone(), user.getRole(), user.getPointBalance(), user.isNotifyEnabled());
+        return new MyProfile(user.getId(), user.getEmail(), user.getLoginId(), user.getName(),
+                user.getNickname(), user.getPhone(), user.getAddress(), user.getRole(),
+                user.getPointBalance(), user.isNotifyEnabled());
     }
 
     @Transactional

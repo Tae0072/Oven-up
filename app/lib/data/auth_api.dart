@@ -6,12 +6,15 @@ import '../models/auth_user.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
-/// 로그인 결과: 토큰 + 회원
+/// 로그인 결과: 토큰 + 회원 (+ 소셜 첫 로그인 온보딩 필요 여부)
 class AuthResult {
   final String token;
   final AuthUser user;
 
-  AuthResult(this.token, this.user);
+  /// 소셜 로그인에서 닉네임·주소 설정(온보딩)이 아직 필요한가?
+  final bool needsProfile;
+
+  AuthResult(this.token, this.user, {this.needsProfile = false});
 }
 
 /// 인증 API 호출 (05_API §2)
@@ -23,15 +26,22 @@ class AuthApi {
   static const Map<String, String> _jsonHeader = {'Content-Type': 'application/json'};
 
   Future<int> signup({
+    required String loginId,
     required String email,
     required String password,
-    required String name,
     required String phone,
+    required String address,
   }) async {
     final res = await _client.post(
       Uri.parse('$kApiBaseUrl/api/auth/signup'),
       headers: _jsonHeader,
-      body: jsonEncode({'email': email, 'password': password, 'name': name, 'phone': phone}),
+      body: jsonEncode({
+        'loginId': loginId,
+        'email': email,
+        'password': password,
+        'phone': phone,
+        'address': address,
+      }),
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     if (res.statusCode != 201) {
@@ -88,6 +98,7 @@ class AuthApi {
     return AuthResult(
       data['accessToken'] as String,
       AuthUser.fromJson(data['user'] as Map<String, dynamic>),
+      needsProfile: (data['needsProfile'] as bool?) ?? false,
     );
   }
 
@@ -104,16 +115,23 @@ class AuthApi {
     return MyProfile.fromJson(body['data'] as Map<String, dynamic>);
   }
 
-  /// 프로필(이름·연락처) 수정 (05_API §2.5)
+  /// 프로필 수정 (05_API §2.5). null인 항목은 바꾸지 않는다.
   Future<MyProfile> updateProfile({
     required String token,
-    required String name,
-    required String phone,
+    String? name,
+    String? phone,
+    String? nickname,
+    String? address,
   }) async {
     final res = await _client.patch(
       Uri.parse('$kApiBaseUrl/api/users/me'),
       headers: {..._jsonHeader, 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'name': name, 'phone': phone}),
+      body: jsonEncode({
+        'name': ?name,
+        'phone': ?phone,
+        'nickname': ?nickname,
+        'address': ?address,
+      }),
     );
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     if (res.statusCode != 200) {
@@ -178,16 +196,22 @@ class AuthApi {
 /// 내 정보 (05_API §2.4)
 class MyProfile {
   final String email;
+  final String loginId;
   final String name;
+  final String nickname;
   final String phone;
+  final String address;
   final String role;
   final int pointBalance;
   final bool notifyEnabled;
 
   const MyProfile({
     required this.email,
+    this.loginId = '',
     required this.name,
+    this.nickname = '',
     required this.phone,
+    this.address = '',
     required this.role,
     required this.pointBalance,
     this.notifyEnabled = true,
@@ -195,8 +219,11 @@ class MyProfile {
 
   factory MyProfile.fromJson(Map<String, dynamic> j) => MyProfile(
         email: (j['email'] as String?) ?? '',
+        loginId: (j['loginId'] as String?) ?? '',
         name: (j['name'] as String?) ?? '',
+        nickname: (j['nickname'] as String?) ?? '',
         phone: (j['phone'] as String?) ?? '',
+        address: (j['address'] as String?) ?? '',
         role: (j['role'] as String?) ?? 'USER',
         pointBalance: (j['pointBalance'] as num?)?.toInt() ?? 0,
         notifyEnabled: (j['notifyEnabled'] as bool?) ?? true,

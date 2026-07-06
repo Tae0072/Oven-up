@@ -24,12 +24,22 @@ public class UserEntity {
     @Column(unique = true, nullable = false)
     private String email;
 
+    /** 로그인 아이디 (자체 회원가입용). 소셜 전용 회원은 null일 수 있다. */
+    @Column(unique = true)
+    private String loginId;
+
     /** BCrypt로 해시된 비밀번호 (평문 저장 금지) */
     private String password;
 
     private String name;
 
+    /** 앱에서 표시할 닉네임. 소셜 첫 로그인 온보딩에서 설정한다. */
+    private String nickname;
+
     private String phone;
+
+    /** 기본 배달 주소 */
+    private String address;
 
     /** 권한: USER(손님) / ADMIN(사장님) */
     private String role;
@@ -59,12 +69,35 @@ public class UserEntity {
         this.role = role;
     }
 
+    /** 자체 회원가입 추가 정보(아이디·주소) 설정 */
+    public void setSignupInfo(String loginId, String address) {
+        this.loginId = loginId;
+        this.address = address;
+    }
+
     /** 프로필(이름·연락처) 수정 */
     public void updateProfile(String name, String phone) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }
         this.phone = phone;
+    }
+
+    /** 닉네임 설정 (소셜 온보딩). 표시 이름도 닉네임으로 맞춘다. */
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+        this.name = nickname;
+    }
+
+    /** 주소 설정 */
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    /** 소셜 첫 로그인 온보딩(닉네임→주소)이 아직 필요한가? */
+    public boolean needsProfileSetup() {
+        return nickname == null || nickname.isBlank()
+                || address == null || address.isBlank();
     }
 
     /** 비밀번호 변경 (해시된 값을 넣어야 함) */
@@ -117,6 +150,18 @@ public class UserEntity {
 
     public String getPhone() {
         return phone;
+    }
+
+    public String getLoginId() {
+        return loginId;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public String getAddress() {
+        return address;
     }
 
     public String getRole() {

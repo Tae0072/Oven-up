@@ -48,13 +48,31 @@ class UserProfileControllerTest {
     }
 
     @Test
-    void updateProfileRejectsEmptyName() throws Exception {
+    void updateProfileRejectsEmptyBody() throws Exception {
         String t = token("prof2@oven.com", "12345678");
+        // 바꿀 내용이 하나도 없으면 거절 (name 빈값은 "이름은 그대로"라는 뜻으로 바뀜)
         mockMvc.perform(patch("/api/users/me").header("Authorization", "Bearer " + t)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\",\"phone\":\"010-0000-0000\"}"))
+                        .content("{\"name\":\"\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
+    }
+
+    @Test
+    void updateNicknameAndAddress() throws Exception {
+        String t = token("prof3@oven.com", "12345678");
+        // 소셜 온보딩과 같은 흐름: 닉네임 → 주소 순서로 각각 저장
+        mockMvc.perform(patch("/api/users/me").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"빵순이\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("빵순이"))
+                .andExpect(jsonPath("$.data.name").value("빵순이"));
+        mockMvc.perform(patch("/api/users/me").header("Authorization", "Bearer " + t)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"명지에코펠리스 101호\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.address").value("명지에코펠리스 101호"));
     }
 
     @Test
