@@ -29,16 +29,25 @@ class MenuCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // 임시 썸네일 (사진 대신 이모지)
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
+              // 썸네일: 사진이 있으면 사진, 없으면 이모지
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 64,
+                  height: 64,
                   color: const Color(0xFFF5ECE2),
-                  borderRadius: BorderRadius.circular(12),
+                  alignment: Alignment.center,
+                  child: item.imageUrl.isEmpty
+                      ? Text(item.emoji, style: const TextStyle(fontSize: 32))
+                      : Image.network(
+                          item.imageUrl,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stack) =>
+                              Text(item.emoji, style: const TextStyle(fontSize: 32)),
+                        ),
                 ),
-                alignment: Alignment.center,
-                child: Text(item.emoji, style: const TextStyle(fontSize: 32)),
               ),
               const SizedBox(width: 12),
               // 이름 / 빵 / 가격

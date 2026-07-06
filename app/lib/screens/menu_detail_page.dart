@@ -117,15 +117,24 @@ class _MenuDetailPageState extends State<MenuDetailPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 큰 썸네일 (사진 대신 이모지)
-          Container(
-            height: 160,
-            decoration: BoxDecoration(
+          // 큰 썸네일: 사진이 있으면 사진, 없으면 이모지
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: item.imageUrl.isEmpty ? 160 : 240,
               color: const Color(0xFFF5ECE2),
-              borderRadius: BorderRadius.circular(16),
+              alignment: Alignment.center,
+              child: item.imageUrl.isEmpty
+                  ? Text(item.emoji, style: const TextStyle(fontSize: 72))
+                  : Image.network(
+                      item.imageUrl,
+                      width: double.infinity,
+                      height: 240,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) =>
+                          Text(item.emoji, style: const TextStyle(fontSize: 72)),
+                    ),
             ),
-            alignment: Alignment.center,
-            child: Text(item.emoji, style: const TextStyle(fontSize: 72)),
           ),
           const SizedBox(height: 16),
           Row(
