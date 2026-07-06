@@ -13,24 +13,9 @@ import '../theme/app_colors.dart';
 import '../utils/format.dart';
 import 'order_complete_page.dart';
 
-/// 결제 수단 정의 (03_기능 §5). code는 서버로 보내는 값.
-class _PayMethod {
-  final String code;
-  final String label;
-  final IconData icon;
-  const _PayMethod(this.code, this.label, this.icon);
-}
-
-const List<_PayMethod> _methods = [
-  _PayMethod('CARD', '신용/체크카드', Icons.credit_card),
-  _PayMethod('KAKAOPAY', '카카오페이', Icons.chat_bubble),
-  _PayMethod('NAVERPAY', '네이버페이', Icons.payments),
-  _PayMethod('TOSSPAY', '토스페이', Icons.account_balance_wallet),
-  _PayMethod('SAMSUNGPAY', '삼성페이', Icons.phone_android),
-];
-
 /// S7. 결제 화면 (02_화면_정의서 S7 / 05_API §5).
-/// 결제 수단을 고르고 결제한다. 지금은 개발용 모의 결제(실제 결제창은 이후 연동).
+/// 결제수단 선택 없이 이니시스(카드 채널) 결제창을 바로 연다.
+/// 이니시스 창 안에서 카드/삼성페이 등 수단을 고를 수 있어 별도 선택 UI는 제거했다.
 class PaymentPage extends StatefulWidget {
   final int orderId;
   final String orderNo;
@@ -44,7 +29,7 @@ class PaymentPage extends StatefulWidget {
 
 class _PaymentPageState extends State<PaymentPage> {
   final OrderApi _orderApi = OrderApi();
-  String _method = _methods.first.code;
+  static const String _method = 'CARD'; // 이니시스 채널 고정
   bool _paying = false;
 
   Future<void> _pay() async {
@@ -154,28 +139,6 @@ class _PaymentPageState extends State<PaymentPage> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text('결제 수단', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ..._methods.map((m) {
-            final selected = _method == m.code;
-            return Card(
-              elevation: 0,
-              color: selected ? AppColors.bg : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: selected ? AppColors.primary : const Color(0xFFE3E8E4)),
-              ),
-              child: ListTile(
-                onTap: () => setState(() => _method = m.code),
-                leading: Icon(m.icon, color: AppColors.primary),
-                title: Text(m.label, style: const TextStyle(fontWeight: FontWeight.w600)),
-                trailing: selected
-                    ? const Icon(Icons.check_circle, color: AppColors.primary)
-                    : const Icon(Icons.circle_outlined, color: Color(0xFFC7D0C9)),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
