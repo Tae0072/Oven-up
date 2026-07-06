@@ -42,6 +42,12 @@ class AddressStore extends ChangeNotifier {
     }
   }
 
+  /// 화면 표시만 갱신 (서버 저장은 이미 끝난 경우 — 주소 선택 화면에서 사용)
+  void setLocal(String newAddress) {
+    _address = newAddress;
+    notifyListeners();
+  }
+
   /// 로그아웃 등으로 초기화
   void clear() {
     _address = '';

@@ -21,10 +21,76 @@ public class UserService {
     private static final int MIN_PASSWORD_LENGTH = 8;
 
     private final UserRepository userRepository;
+    private final UserAddressRepository addressRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserAddressRepository addressRepository) {
         this.userRepository = userRepository;
+        this.addressRepository = addressRepository;
+    }
+
+    /** 주소 목록 한 건 응답 */
+    public record AddressView(long id, String address, boolean selected) {
+    }
+
+    /** 주소 목록. 목록이 비어 있는데 회원 주소가 있으면(과거 가입자) 목록으로 옮겨준다. */
+    @Transactional
+    public java.util.List<AddressView> listAddresses(Long userId) {
+        UserEntity user = requireUser(userId);
+        java.util.List<UserAddressEntity> list = addressRepository.findByUserIdOrderByIdDesc(userId);
+        if (list.isEmpty() && user.getAddress() != null && !user.getAddress().isBlank()) {
+            addressRepository.save(new UserAddressEntity(userId, user.getAddress().trim()));
+            list = addressRepository.findByUserIdOrderByIdDesc(userId);
+        }
+        String current = user.getAddress() == null ? "" : user.getAddress();
+        return list.stream()
+                .map(a -> new AddressView(a.getId(), a.getAddress(), a.getAddress().equals(current)))
+                .toList();
+    }
+
+    /** 주소 추가(+바로 선택). 같은 주소가 이미 있으면 선택만 바꾼다. */
+    @Transactional
+    public java.util.List<AddressView> addAddress(Long userId, String address) {
+        if (address == null || address.isBlank()) {
+            throw ApiException.badRequest("INVALID_INPUT", "주소를 입력해 주세요.");
+        }
+        UserEntity user = requireUser(userId);
+        String trimmed = address.trim();
+        if (!addressRepository.existsByUserIdAndAddress(userId, trimmed)) {
+            addressRepository.save(new UserAddressEntity(userId, trimmed));
+        }
+        user.setAddress(trimmed);
+        userRepository.save(user);
+        return listAddresses(userId);
+    }
+
+    /** 목록에서 주소 선택 → 현재 주소로 설정 */
+    @Transactional
+    public java.util.List<AddressView> selectAddress(Long userId, long addressId) {
+        UserEntity user = requireUser(userId);
+        UserAddressEntity target = addressRepository.findById(addressId)
+                .filter(a -> a.getUserId().equals(userId))
+                .orElseThrow(() -> ApiException.notFound("ADDRESS_NOT_FOUND", "주소를 찾을 수 없어요."));
+        user.setAddress(target.getAddress());
+        userRepository.save(user);
+        return listAddresses(userId);
+    }
+
+    /** 주소 삭제. 현재 선택된 주소를 지우면 남은 주소 중 최신 것을 선택(없으면 빈 값). */
+    @Transactional
+    public java.util.List<AddressView> deleteAddress(Long userId, long addressId) {
+        UserEntity user = requireUser(userId);
+        UserAddressEntity target = addressRepository.findById(addressId)
+                .filter(a -> a.getUserId().equals(userId))
+                .orElseThrow(() -> ApiException.notFound("ADDRESS_NOT_FOUND", "주소를 찾을 수 없어요."));
+        boolean wasSelected = target.getAddress().equals(user.getAddress());
+        addressRepository.delete(target);
+        if (wasSelected) {
+            java.util.List<UserAddressEntity> rest = addressRepository.findByUserIdOrderByIdDesc(userId);
+            user.setAddress(rest.isEmpty() ? "" : rest.get(0).getAddress());
+            userRepository.save(user);
+        }
+        return listAddresses(userId);
     }
 
     private UserEntity requireUser(Long userId) {
