@@ -39,6 +39,15 @@ public class NotificationController {
         return (Long) attr;
     }
 
+    /** 기기 토큰 등록 (푸시용). 앱이 FCM 토큰을 받으면 호출한다. */
+    @PostMapping("/api/notifications/device-token")
+    public ApiResponse<Void> registerDeviceToken(HttpServletRequest request,
+                                                 @org.springframework.web.bind.annotation.RequestBody
+                                                 com.ovenup.server.notification.dto.DeviceTokenRequest body) {
+        notificationService.registerDeviceToken(requireUserId(request), body.token());
+        return ApiResponse.ok(null);
+    }
+
     @GetMapping("/api/notifications")
     public ApiResponse<List<NotificationView>> list(HttpServletRequest request) {
         return ApiResponse.ok(notificationService.myList(requireUserId(request)));

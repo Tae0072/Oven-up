@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 서버(API) 호출용 인터넷 권한 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 푸시 알림 표시 권한 (Android 13+, 앱에서 런타임 요청) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="오븐업"
         android:name="${applicationName}"

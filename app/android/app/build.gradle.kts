@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // Firebase(FCM) 설정 주입 — android/app/google-services.json 필요 (레포에 커밋하지 않음)
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }

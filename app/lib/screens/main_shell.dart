@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/menu_repository.dart';
+import '../data/push_service.dart';
+import '../state/auth_store.dart';
 import 'home_page.dart';
 import 'menu_list_page.dart';
 import 'my_page.dart';
@@ -18,6 +20,14 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 로그인 후 홈에 들어오면 이 기기의 푸시 토큰을 서버에 등록한다.
+    // (Firebase 미설정/웹/테스트에서는 내부에서 조용히 건너뜀)
+    PushService.registerToken(AuthStore.instance.token);
+  }
 
   void _goToMenu() => setState(() => _index = 1);
 
