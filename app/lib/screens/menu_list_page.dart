@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/menu_repository.dart';
 import '../models/menu_item.dart';
 import '../state/cart.dart';
+import '../widgets/address_title.dart';
 import '../widgets/menu_card.dart';
 import 'cart_page.dart';
 import 'menu_detail_page.dart';
@@ -90,7 +91,9 @@ class _MenuListPageState extends State<MenuListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('메뉴'),
+        centerTitle: false,
+        titleSpacing: 8,
+        title: const AddressTitle(),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),

@@ -14,6 +14,7 @@ import 'admin_menus_page.dart';
 import 'admin_orders_page.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
+import '../state/address_store.dart';
 import 'login_page.dart';
 import 'order_history_page.dart';
 import 'profile_edit_page.dart';
@@ -44,6 +45,7 @@ class MyPage extends StatelessWidget {
     );
     if (ok != true || !context.mounted) return;
     AuthStore.instance.logout();
+    AddressStore.instance.clear();
     // 로그인 화면(게이트)으로 되돌아간다. 이전 화면들은 모두 제거.
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(

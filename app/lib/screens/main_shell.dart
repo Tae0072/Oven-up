@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 
 import '../data/menu_repository.dart';
 import '../data/push_service.dart';
+import '../state/address_store.dart';
 import '../state/auth_store.dart';
 import 'home_page.dart';
 import 'menu_list_page.dart';
@@ -20,6 +22,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+  DateTime? _lastBackPressed;
 
   @override
   void initState() {
@@ -27,9 +30,32 @@ class _MainShellState extends State<MainShell> {
     // 로그인 후 홈에 들어오면 이 기기의 푸시 토큰을 서버에 등록한다.
     // (Firebase 미설정/웹/테스트에서는 내부에서 조용히 건너뜀)
     PushService.registerToken(AuthStore.instance.token);
+    // 상단 주소 표시용 — 내 주소 불러오기
+    AddressStore.instance.load();
   }
 
   void _goToMenu() => setState(() => _index = 1);
+
+  /// 뒤로가기 처리: 다른 탭이면 홈으로, 홈이면 2초 안에 한 번 더 눌러야 종료.
+  void _handleBack() {
+    if (_index != 0) {
+      setState(() => _index = 0);
+      return;
+    }
+    final now = DateTime.now();
+    if (_lastBackPressed == null ||
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('한 번 더 누르면 앱이 종료돼요'),
+          duration: Duration(seconds: 2),
+        ));
+      return;
+    }
+    SystemNavigator.pop(); // 앱 종료
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +66,12 @@ class _MainShellState extends State<MainShell> {
       MyPage(repository: widget.repository),
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: false, // 뒤로가기를 직접 처리 (홈 아니면 홈으로, 홈이면 두 번 눌러 종료)
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -53,6 +84,7 @@ class _MainShellState extends State<MainShell> {
               label: '메뉴'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: '마이페이지'),
         ],
+      ),
       ),
     );
   }

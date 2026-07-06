@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/notification_api.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
+import '../widgets/address_title.dart';
 import 'group_order_page.dart';
 import 'inquiry_list_page.dart';
 import 'notifications_page.dart';
@@ -35,7 +36,9 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('오븐업 5VEN UP'),
+        centerTitle: false,
+        titleSpacing: 8,
+        title: const AddressTitle(),
         actions: const [NotificationBell()],
       ),
       body: ListView(

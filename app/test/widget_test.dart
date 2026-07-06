@@ -42,7 +42,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('오븐업 5VEN UP'), findsWidgets); // 홈 상단
+    expect(find.text('주소 설정'), findsWidgets); // 홈 상단 주소 선택 (주소 미설정 상태)
     expect(find.text('메뉴 주문'), findsOneWidget); // 바로가기 카드
 
     await tester.tap(find.text('마이페이지')); // 하단 내비 탭
@@ -54,7 +54,7 @@ void main() {
     await tester.pumpWidget(_menuApp());
     await tester.pumpAndSettle(); // 메뉴 로딩 완료 대기
 
-    expect(find.text('메뉴'), findsWidgets);
+    expect(find.text('주소 설정'), findsWidgets); // 상단 주소 선택
     expect(find.text('LA갈비 바게트 샌드위치'), findsOneWidget);
     expect(find.text('1'), findsNothing);
 
