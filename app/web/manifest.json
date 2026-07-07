@@ -1,11 +1,11 @@
 {
-    "name": "oven_up_app",
-    "short_name": "oven_up_app",
+    "name": "오븐업 5VEN UP",
+    "short_name": "오븐업",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F2F7F3",
+    "theme_color": "#1C9A53",
+    "description": "갓 구운 바게트 샌드위치, 오븐업에서 주문하세요",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
