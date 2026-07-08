@@ -1,0 +1,28 @@
+name: Auto Merge
+
+# dev 브랜치로 향하는 PR에 "자동 머지"를 켜 둔다.
+# 실제 머지는 브랜치 보호 규칙의 필수 검사(CI)가 모두 통과하면 GitHub가 자동으로 수행한다.
+# ※ 동작 전제:
+#   1) 레포 Settings > General > Pull Requests > "Allow auto-merge" 체크
+#   2) dev 브랜치 보호 규칙에 필수 상태 검사(server-build/app-build/secret-scan) 지정
+#   위 설정 전에는 이 워크플로가 실패할 수 있는데, 정상입니다(설정 후 동작).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [dev]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-automerge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Enable auto-merge (squash)
+        run: gh pr merge --auto --squash --delete-branch "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

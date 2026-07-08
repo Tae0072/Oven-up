@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="갓 구운 바게트 샌드위치, 오븐업에서 주문하세요">
+
+  <!-- iOS meta tags & icons (아이폰 '홈 화면에 추가' 시 앱처럼 열리도록) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="오븐업">
+  <meta name="theme-color" content="#1C9A53">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>오븐업 5VEN UP</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- PortOne(포트원) V2 결제 브라우저 SDK -->
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+
+  <!-- 다음(카카오) 우편번호 서비스 — 주소 검색창 (무료, 키 불필요) -->
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script>
+    // Flutter에서 호출: 주소 검색 팝업을 열고, 선택한 도로명(또는 지번) 주소를 콜백으로 돌려준다.
+    function openDaumPostcode(cb) {
+      new daum.Postcode({
+        oncomplete: function (data) {
+          cb(data.roadAddress || data.jibunAddress || '');
+        }
+      }).open();
+    }
+  </script>
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
