@@ -56,12 +56,14 @@ public class OrderService {
     private final CouponService couponService;
     private final UserRepository userRepository;
     private final com.ovenup.server.building.BuildingPolicy buildingPolicy;
+    private final boolean requireLocation;
     private final int earnPercent;
 
     public OrderService(CartService cartService, OrderRepository orderRepository,
                         PaymentVerifier paymentVerifier, NotificationService notificationService,
                         CouponService couponService, UserRepository userRepository,
                         com.ovenup.server.building.BuildingPolicy buildingPolicy,
+                        @Value("${app.building.require-location:true}") boolean requireLocation,
                         @Value("${app.point.earn-percent:1}") int earnPercent) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
@@ -70,6 +72,7 @@ public class OrderService {
         this.couponService = couponService;
         this.userRepository = userRepository;
         this.buildingPolicy = buildingPolicy;
+        this.requireLocation = requireLocation;
         this.earnPercent = earnPercent;
     }
 
@@ -85,8 +88,11 @@ public class OrderService {
             throw ApiException.badRequest("EMPTY_CART", "장바구니가 비어 있어요.");
         }
 
-        // 앱이 보낸 현재 위치(GPS)가 있으면 건물 반경 안인지 보조 확인한다.
-        // (주소는 아래에서 별도 검증. 위치 미제공/실패는 통과 — 실내 GPS는 자주 안 잡히기 때문)
+        // 건물 전용 앱: 주문은 현재 위치(GPS) 확인이 필수다 (app.building.require-location=false로 완화 가능).
+        if (requireLocation && (request.lat() == null || request.lng() == null)) {
+            throw ApiException.badRequest("LOCATION_REQUIRED",
+                    "위치 확인이 필요해요. 위치 권한을 허용한 뒤 다시 주문해 주세요.");
+        }
         if (request.lat() != null && request.lng() != null
                 && !buildingPolicy.isWithinRadius(request.lat(), request.lng())) {
             throw ApiException.badRequest("LOCATION_NOT_ALLOWED",

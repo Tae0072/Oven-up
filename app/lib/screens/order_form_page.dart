@@ -195,20 +195,21 @@ class _OrderFormPageState extends State<OrderFormPage> {
       if (!AuthStore.instance.isLoggedIn) return; // 로그인 안 하고 돌아옴
     }
 
-    // 2) 건물 전용 앱: 현재 위치가 명지에코펠리스 반경 안인지 보조 확인
-    //    (위치 권한이 없거나 확인 실패면 통과 — 주소는 이미 건물로 고정돼 있다)
+    // 2) 건물 전용 앱: 주문은 위치 확인이 필수 — 건물 반경 안일 때만 진행
+    //    (서버도 좌표 없는/건물 밖 주문을 거절한다)
     setState(() => _submitting = true);
     final buildingCheck = await checkInsideBuilding();
     if (!mounted) return;
-    if (buildingCheck.result == BuildingCheckResult.outside) {
+    if (buildingCheck.result != BuildingCheckResult.inside) {
       setState(() => _submitting = false);
       final dist = buildingCheck.distanceMeters?.round();
+      final msg = buildingCheck.result == BuildingCheckResult.outside
+          ? '$kBuildingName 안에서만 주문할 수 있어요.'
+              '${dist == null ? '' : ' (현재 위치가 건물에서 약 ${dist}m 떨어져 있어요)'}'
+          : '위치를 확인할 수 없어요. 위치 권한을 허용하고 잠시 후 다시 시도해 주세요.';
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text('$kBuildingName 안에서만 주문할 수 있어요.'
-              '${dist == null ? '' : ' (현재 위치가 건물에서 약 ${dist}m 떨어져 있어요)'}'),
-        ));
+        ..showSnackBar(SnackBar(content: Text(msg)));
       return;
     }
 

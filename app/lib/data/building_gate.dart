@@ -5,7 +5,8 @@ import 'building_config.dart';
 /// 현재 위치 확인 결과.
 /// - inside: 건물 반경 안 (좌표 포함)
 /// - outside: 건물 반경 밖 (좌표 포함) → 주문 차단
-/// - unknown: 권한 거부·시간 초과 등으로 확인 불가 → 통과 (주소는 이미 건물로 고정돼 있어 보조 확인만 한다)
+/// - unknown: 권한 거부·시간 초과 등으로 확인 불가 → 주문 차단 (위치 필수 정책)
+///   ※ 서버도 좌표 없는 주문을 거절하므로(LOCATION_REQUIRED) 앱에서 미리 안내한다.
 enum BuildingCheckResult { inside, outside, unknown }
 
 class BuildingCheck {
@@ -35,8 +36,9 @@ Future<BuildingCheck> checkInsideBuilding() async {
     }
     final pos = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
-        timeLimit: Duration(seconds: 8),
+        accuracy: LocationAccuracy.high,
+        // 실내에서 첫 위치를 잡는 데 시간이 걸릴 수 있어 넉넉히 준다 (위치 필수 정책)
+        timeLimit: Duration(seconds: 15),
       ),
     );
     final distance = Geolocator.distanceBetween(
