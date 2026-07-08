@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
@@ -176,6 +177,44 @@ class _OrderFormPageState extends State<OrderFormPage> {
     return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
   }
 
+  /// 위치 권한/설정 안내 다이얼로그.
+  /// 모바일은 설정 화면 바로가기 버튼을 제공하고, 웹은 브라우저에서 허용하는 방법을 안내한다.
+  Future<void> _showLocationHelpDialog({required bool serviceOff}) async {
+    final title = serviceOff ? '위치(GPS)가 꺼져 있어요' : '위치 권한이 필요해요';
+    const common = '이 앱은 $kBuildingName 안에서만 주문할 수 있어서, 주문할 때 현재 위치 확인이 필요해요.';
+    final body = serviceOff
+        ? '$common\n\n기기의 위치(GPS)를 켠 뒤 다시 시도해 주세요.'
+        : kIsWeb
+            ? '$common\n\n브라우저 주소창의 자물쇠(또는 설정) 아이콘 → "위치"를 허용으로 바꾼 뒤 다시 시도해 주세요.'
+            : '$common\n\n[설정 열기]를 눌러 위치 권한을 허용해 주세요.';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('닫기'),
+          ),
+          if (!kIsWeb)
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                if (serviceOff) {
+                  openDeviceLocationSettings();
+                } else {
+                  openAppPermissionSettings();
+                }
+              },
+              icon: const Icon(Icons.settings),
+              label: Text(serviceOff ? '위치 설정 열기' : '설정 열기'),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pay() async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -202,14 +241,24 @@ class _OrderFormPageState extends State<OrderFormPage> {
     if (!mounted) return;
     if (buildingCheck.result != BuildingCheckResult.inside) {
       setState(() => _submitting = false);
-      final dist = buildingCheck.distanceMeters?.round();
-      final msg = buildingCheck.result == BuildingCheckResult.outside
-          ? '$kBuildingName 안에서만 주문할 수 있어요.'
-              '${dist == null ? '' : ' (현재 위치가 건물에서 약 ${dist}m 떨어져 있어요)'}'
-          : '위치를 확인할 수 없어요. 위치 권한을 허용하고 잠시 후 다시 시도해 주세요.';
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(msg)));
+      switch (buildingCheck.result) {
+        case BuildingCheckResult.permissionDenied:
+          await _showLocationHelpDialog(serviceOff: false);
+        case BuildingCheckResult.serviceDisabled:
+          await _showLocationHelpDialog(serviceOff: true);
+        case BuildingCheckResult.outside:
+          final dist = buildingCheck.distanceMeters?.round();
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+                content: Text('$kBuildingName 안에서만 주문할 수 있어요.'
+                    '${dist == null ? '' : ' (현재 위치가 건물에서 약 ${dist}m 떨어져 있어요)'}')));
+        default:
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+                content: Text('위치를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.')));
+      }
       return;
     }
 
