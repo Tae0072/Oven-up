@@ -22,11 +22,22 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserAddressRepository addressRepository;
+    private final com.ovenup.server.building.BuildingPolicy buildingPolicy;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserService(UserRepository userRepository, UserAddressRepository addressRepository) {
+    public UserService(UserRepository userRepository, UserAddressRepository addressRepository,
+                       com.ovenup.server.building.BuildingPolicy buildingPolicy) {
         this.userRepository = userRepository;
         this.addressRepository = addressRepository;
+        this.buildingPolicy = buildingPolicy;
+    }
+
+    /** 건물 전용 앱: 건물 밖 주소는 등록·수정 모두 거절한다. */
+    private void requireBuildingAddress(String address) {
+        if (!buildingPolicy.isAddressAllowed(address)) {
+            throw ApiException.badRequest("ADDRESS_NOT_ALLOWED",
+                    "이 앱은 " + buildingPolicy.name() + " 전용이에요. 건물 내 주소(층/호수)만 등록할 수 있어요.");
+        }
     }
 
     /** 주소 목록 한 건 응답 */
@@ -54,6 +65,7 @@ public class UserService {
         if (address == null || address.isBlank()) {
             throw ApiException.badRequest("INVALID_INPUT", "주소를 입력해 주세요.");
         }
+        requireBuildingAddress(address);
         UserEntity user = requireUser(userId);
         String trimmed = address.trim();
         if (!addressRepository.existsByUserIdAndAddress(userId, trimmed)) {
@@ -117,8 +129,9 @@ public class UserService {
         if (hasNickname) {
             user.setNickname(request.nickname().trim());
         }
-        // 주소 설정 (소셜 온보딩 2단계 / 회원정보 수정)
+        // 주소 설정 (소셜 온보딩 2단계 / 회원정보 수정) — 건물 내 주소만 허용
         if (hasAddress) {
+            requireBuildingAddress(request.address());
             user.setAddress(request.address().trim());
         }
         userRepository.save(user);

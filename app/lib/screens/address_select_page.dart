@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/address_api.dart';
-import '../data/address_search.dart';
 import '../data/api_exception.dart';
+import '../data/building_config.dart';
 import '../state/address_store.dart';
 import '../state/auth_store.dart';
 import '../theme/app_colors.dart';
@@ -77,22 +77,55 @@ class _AddressSelectPageState extends State<AddressSelectPage> {
     }
   }
 
+  /// 건물 전용 앱: 주소는 명지에코펠리스로 고정, 층/호수만 입력받는다.
   Future<void> _add() async {
-    final picked = await pickAddress(context);
-    if (picked == null || picked.isEmpty || !mounted) return;
-    // 상세주소(동/호수) 입력 (선택)
     final detailController = TextEditingController();
     final detail = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('상세주소'),
-        content: TextField(
-          controller: detailController,
-          autofocus: true,
-          decoration: const InputDecoration(
-              hintText: '동/호수 등 (없으면 비워두세요)', border: OutlineInputBorder()),
+        title: const Text('주소 추가'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 고정된 건물 주소 안내
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(kBuildingName,
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(kBuildingRoadAddress,
+                      style: TextStyle(color: Colors.grey[700], fontSize: 12)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text('이 앱은 $kBuildingName 전용이라 건물 주소는 고정돼요.',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: detailController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                  labelText: '층/호수',
+                  hintText: '예: 3층 305호',
+                  border: OutlineInputBorder()),
+            ),
+          ],
         ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('취소'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(detailController.text.trim()),
             child: const Text('저장'),
@@ -100,8 +133,12 @@ class _AddressSelectPageState extends State<AddressSelectPage> {
         ],
       ),
     );
-    if (!mounted) return;
-    final full = (detail == null || detail.isEmpty) ? picked : '$picked, $detail';
+    if (!mounted || detail == null) return;
+    if (detail.isEmpty) {
+      _snack('층/호수를 입력해 주세요.');
+      return;
+    }
+    final full = '$kBuildingBaseAddress, $detail';
     final token = _token;
     if (token == null) return;
     try {

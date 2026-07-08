@@ -8,6 +8,7 @@ package com.ovenup.server.order.dto;
  * - deliveryAddress: 배달일 때만 (명지에코펠리스 건물 내)
  * - couponCode: 사용할 쿠폰 코드(없으면 null)
  * - usePoints: 사용할 적립금(원). 없으면 0
+ * - lat/lng: 앱이 확인한 현재 위치(선택). 있으면 서버가 건물 반경 안인지 보조 검증한다.
  */
 public record CreateOrderRequest(
         String fulfillmentType,
@@ -15,5 +16,7 @@ public record CreateOrderRequest(
         String deliveryAddress,
         String requestMsg,
         String couponCode,
-        int usePoints) {
+        int usePoints,
+        Double lat,
+        Double lng) {
 }
