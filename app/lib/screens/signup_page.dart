@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/address_search.dart';
 import '../data/api_exception.dart';
+import '../data/building_config.dart';
 import '../data/auth_api.dart';
 import '../data/identity_verify.dart';
 import '../data/payment_config.dart';
@@ -25,7 +25,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _passwordConfirm = TextEditingController();
   final TextEditingController _phone = TextEditingController();
   final TextEditingController _email = TextEditingController();
-  final TextEditingController _address = TextEditingController();
+  // 건물 전용 앱: 주소는 명지에코펠리스로 고정, 층/호수만 입력받는다.
   final TextEditingController _addressDetail = TextEditingController();
 
   /// 완료된 본인인증 ID (배민식 PASS 인증). 서버가 가입 시 다시 검증한다.
@@ -75,14 +75,6 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  /// 주소 검색창 열기
-  Future<void> _searchAddress() async {
-    final picked = await pickAddress(context);
-    if (picked != null && picked.isNotEmpty && mounted) {
-      setState(() => _address.text = picked);
-    }
-  }
-
   @override
   void dispose() {
     _loginId.dispose();
@@ -90,7 +82,6 @@ class _SignupPageState extends State<SignupPage> {
     _passwordConfirm.dispose();
     _phone.dispose();
     _email.dispose();
-    _address.dispose();
     _addressDetail.dispose();
     super.dispose();
   }
@@ -106,14 +97,11 @@ class _SignupPageState extends State<SignupPage> {
     }
     final email = _email.text.trim();
     if (email.isEmpty || !email.contains('@')) return '올바른 이메일을 입력해 주세요.';
-    if (_address.text.trim().isEmpty) return '주소 검색으로 주소를 선택해 주세요.';
+    if (_addressDetail.text.trim().isEmpty) return '층/호수를 입력해 주세요.';
     return null;
   }
 
-  String get _fullAddress {
-    final detail = _addressDetail.text.trim();
-    return detail.isEmpty ? _address.text.trim() : '${_address.text.trim()}, $detail';
-  }
+  String get _fullAddress => '$kBuildingBaseAddress, ${_addressDetail.text.trim()}';
 
   Future<void> _submit() async {
     final problem = _validate();
@@ -236,24 +224,40 @@ class _SignupPageState extends State<SignupPage> {
                 labelText: '이메일', hintText: 'example@email.com', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
-          // ── 주소: 검색창으로 선택 ──
-          TextField(
-            controller: _address,
-            readOnly: true,
-            onTap: _searchAddress,
-            decoration: const InputDecoration(
-              labelText: '주소',
-              hintText: '눌러서 주소 검색',
-              border: OutlineInputBorder(),
-              suffixIcon: Icon(Icons.search),
+          // ── 주소: 건물 고정 + 층/호수 입력 (건물 전용 앱) ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F6F4),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.apartment, size: 18),
+                    const SizedBox(width: 6),
+                    const Text(kBuildingName,
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(kBuildingRoadAddress,
+                    style: TextStyle(color: Colors.grey[700], fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('이 앱은 $kBuildingName 전용이라 건물 주소는 고정돼요.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              ],
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _addressDetail,
             decoration: const InputDecoration(
-                labelText: '상세주소 (동/호수 등)',
-                hintText: '예: 305호',
+                labelText: '층/호수',
+                hintText: '예: 3층 305호',
                 border: OutlineInputBorder()),
           ),
           if (_error != null) ...[

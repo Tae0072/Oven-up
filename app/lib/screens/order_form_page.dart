@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../data/api_exception.dart';
+import '../data/building_config.dart';
+import '../data/building_gate.dart';
 import '../data/order_api.dart';
 import '../data/promo_api.dart';
+import '../state/address_store.dart';
 import '../state/auth_store.dart';
 import '../state/cart.dart';
 import '../theme/app_colors.dart';
@@ -52,6 +55,11 @@ class _OrderFormPageState extends State<OrderFormPage> {
   @override
   void initState() {
     super.initState();
+    // 선택된 주소(건물 고정 형식)에서 층/호수를 미리 채워준다.
+    final saved = AddressStore.instance.address;
+    if (saved.contains(kBuildingName) && saved.contains(', ')) {
+      _addressController.text = saved.split(', ').last.trim();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPoints());
   }
 
@@ -187,8 +195,24 @@ class _OrderFormPageState extends State<OrderFormPage> {
       if (!AuthStore.instance.isLoggedIn) return; // 로그인 안 하고 돌아옴
     }
 
-    // 2) 주문 생성 (결제대기) → 결제 화면(S7)으로 이동
+    // 2) 건물 전용 앱: 현재 위치가 명지에코펠리스 반경 안인지 보조 확인
+    //    (위치 권한이 없거나 확인 실패면 통과 — 주소는 이미 건물로 고정돼 있다)
     setState(() => _submitting = true);
+    final buildingCheck = await checkInsideBuilding();
+    if (!mounted) return;
+    if (buildingCheck.result == BuildingCheckResult.outside) {
+      setState(() => _submitting = false);
+      final dist = buildingCheck.distanceMeters?.round();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text('$kBuildingName 안에서만 주문할 수 있어요.'
+              '${dist == null ? '' : ' (현재 위치가 건물에서 약 ${dist}m 떨어져 있어요)'}'),
+        ));
+      return;
+    }
+
+    // 3) 주문 생성 (결제대기) → 결제 화면(S7)으로 이동
     try {
       final created = await _orderApi.createOrder(
         token: AuthStore.instance.token!,
@@ -197,10 +221,14 @@ class _OrderFormPageState extends State<OrderFormPage> {
         scheduledAtIso: (_isReservation && _scheduledAt != null)
             ? _scheduledAt!.toIso8601String()
             : null,
-        deliveryAddress: _isDelivery ? _addressController.text.trim() : null,
+        deliveryAddress: _isDelivery
+            ? '$kBuildingBaseAddress, ${_addressController.text.trim()}'
+            : null,
         requestMsg: _requestController.text.trim(),
         couponCode: _appliedCoupon,
         usePoints: _pointsUsed,
+        lat: buildingCheck.lat,
+        lng: buildingCheck.lng,
       );
       if (!mounted) return;
       // 장바구니는 여기서 비우지 않는다 — 결제가 실제로 성공했을 때(PaymentPage)만 비운다.
@@ -271,12 +299,16 @@ class _OrderFormPageState extends State<OrderFormPage> {
 
               if (_isDelivery) ...[
                 const SizedBox(height: 12),
+                // 건물 전용 앱: 건물 주소는 고정, 층/호수만 입력
+                Text('배달 주소: $kBuildingBaseAddress',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                const SizedBox(height: 8),
                 TextField(
                   controller: _addressController,
                   onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
-                    labelText: '배달 주소 (명지에코펠리스 건물 내)',
-                    hintText: '예: 명지에코펠리스 305호',
+                    labelText: '층/호수',
+                    hintText: '예: 3층 305호',
                     border: OutlineInputBorder(),
                   ),
                 ),

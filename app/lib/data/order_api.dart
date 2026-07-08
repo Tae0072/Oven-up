@@ -26,6 +26,8 @@ class OrderApi {
     String? requestMsg,
     String? couponCode,
     int usePoints = 0,
+    double? lat,
+    double? lng,
   }) async {
     final authHeader = {'Authorization': 'Bearer $token'};
     final jsonAuth = {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
@@ -60,6 +62,11 @@ class OrderApi {
     }
     if (usePoints > 0) {
       payload['usePoints'] = usePoints;
+    }
+    // 건물 전용 앱: 확인된 현재 위치가 있으면 같이 보낸다 (서버가 반경 재검증)
+    if (lat != null && lng != null) {
+      payload['lat'] = lat;
+      payload['lng'] = lng;
     }
 
     final res = await _client.post(

@@ -42,7 +42,6 @@ import com.ovenup.server.payment.dto.PaymentDtos.PaymentDone;
 @Service
 public class OrderService {
 
-    private static final String DELIVERABLE_BUILDING = "명지에코펠리스";
     private static final int MIN_SANDWICH_FOR_DELIVERY = 2;
     private static final int DELIVERY_FEE = 0;
     private static final Set<String> FULFILLMENT_TYPES = Set.of("DINE_IN", "TAKEOUT", "DELIVERY");
@@ -56,11 +55,13 @@ public class OrderService {
     private final NotificationService notificationService;
     private final CouponService couponService;
     private final UserRepository userRepository;
+    private final com.ovenup.server.building.BuildingPolicy buildingPolicy;
     private final int earnPercent;
 
     public OrderService(CartService cartService, OrderRepository orderRepository,
                         PaymentVerifier paymentVerifier, NotificationService notificationService,
                         CouponService couponService, UserRepository userRepository,
+                        com.ovenup.server.building.BuildingPolicy buildingPolicy,
                         @Value("${app.point.earn-percent:1}") int earnPercent) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
@@ -68,6 +69,7 @@ public class OrderService {
         this.notificationService = notificationService;
         this.couponService = couponService;
         this.userRepository = userRepository;
+        this.buildingPolicy = buildingPolicy;
         this.earnPercent = earnPercent;
     }
 
@@ -81,6 +83,14 @@ public class OrderService {
         List<CartLineComputed> lines = cartService.computeLines(userId);
         if (lines.isEmpty()) {
             throw ApiException.badRequest("EMPTY_CART", "장바구니가 비어 있어요.");
+        }
+
+        // 앱이 보낸 현재 위치(GPS)가 있으면 건물 반경 안인지 보조 확인한다.
+        // (주소는 아래에서 별도 검증. 위치 미제공/실패는 통과 — 실내 GPS는 자주 안 잡히기 때문)
+        if (request.lat() != null && request.lng() != null
+                && !buildingPolicy.isWithinRadius(request.lat(), request.lng())) {
+            throw ApiException.badRequest("LOCATION_NOT_ALLOWED",
+                    buildingPolicy.name() + " 건물 안에서만 주문할 수 있어요. 건물로 이동한 뒤 다시 시도해 주세요.");
         }
         int subtotal = lines.stream().mapToInt(CartLineComputed::lineprice).sum();
         int sandwichCount = sandwichCount(lines);
@@ -376,7 +386,7 @@ public class OrderService {
     }
 
     private boolean isBuildingOk(String address) {
-        return address != null && address.contains(DELIVERABLE_BUILDING);
+        return buildingPolicy.isAddressAllowed(address);
     }
 
     // 영업시간 (예약 가능 시간대). 10:00 ~ 20:00 (마지막 예약 19:xx).

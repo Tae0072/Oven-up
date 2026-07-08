@@ -39,17 +39,20 @@ public class AuthService {
     private final SocialProfileVerifier socialVerifier;
     private final SocialAuthCodeExchanger socialCodeExchanger;
     private final IdentityVerifier identityVerifier;
+    private final com.ovenup.server.building.BuildingPolicy buildingPolicy;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthService(UserRepository userRepository, SocialAccountRepository socialAccountRepository,
                        JwtProvider jwtProvider, SocialProfileVerifier socialVerifier,
-                       SocialAuthCodeExchanger socialCodeExchanger, IdentityVerifier identityVerifier) {
+                       SocialAuthCodeExchanger socialCodeExchanger, IdentityVerifier identityVerifier,
+                       com.ovenup.server.building.BuildingPolicy buildingPolicy) {
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
         this.jwtProvider = jwtProvider;
         this.socialVerifier = socialVerifier;
         this.socialCodeExchanger = socialCodeExchanger;
         this.identityVerifier = identityVerifier;
+        this.buildingPolicy = buildingPolicy;
     }
 
     /** 본인인증 결과 미리보기 (이름·전화번호). 실패 시 400. */
@@ -96,6 +99,12 @@ public class AuthService {
             if (!r.name().isBlank()) {
                 name = r.name();
             }
+        }
+        // 건물 전용 앱: 주소를 적어 냈다면 건물 내 주소인지 확인한다 (주소 없는 가입은 허용 — 온보딩에서 입력).
+        if (request.address() != null && !request.address().isBlank()
+                && !buildingPolicy.isAddressAllowed(request.address())) {
+            throw ApiException.badRequest("ADDRESS_NOT_ALLOWED",
+                    "이 앱은 " + buildingPolicy.name() + " 전용이에요. 건물 내 주소(층/호수)만 등록할 수 있어요.");
         }
         UserEntity user = new UserEntity(request.email().trim(), hashed, name, phone);
         user.setSignupInfo(loginId, request.address() == null ? null : request.address().trim());
