@@ -83,6 +83,7 @@ public class UserService {
         UserAddressEntity target = addressRepository.findById(addressId)
                 .filter(a -> a.getUserId().equals(userId))
                 .orElseThrow(() -> ApiException.notFound("ADDRESS_NOT_FOUND", "주소를 찾을 수 없어요."));
+        requireBuildingAddress(target.getAddress()); // 과거에 남은 건물 밖 주소는 선택도 불가
         user.setAddress(target.getAddress());
         userRepository.save(user);
         return listAddresses(userId);
